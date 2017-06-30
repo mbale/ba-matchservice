@@ -84,14 +84,13 @@ const logger = () =>
 
     if (action.type === ActionTypes.CREATED) {
       console.log(`entity_id: ${id}`);
-      console.log(`entity_name: ${await model.get('name')}`);
     }
     return next(action);
   };
 
 const initModel = () => {
-  Match.use(setDefaultFields);
-  Match.use(logger);
+  // Match.use(setDefaultFields);
+  // Match.use(logger);
 
   return Match;
 };

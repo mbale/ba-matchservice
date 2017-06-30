@@ -11,32 +11,39 @@ class AppError extends Error {
   }
 }
 
-class ThresholdInvalidError extends AppError {
-  constructor(threshold = null) {
-    super('Threshold\'s invalid');
+class UnknownCorrelationIdError extends AppError {
+  constructor(correlationId = null, type = null) {
+    super('Correlation Id\'s not found');
 
-    this.threshold = threshold;
+    this.correlationId = correlationId;
+    this.type = type;
   }
 }
 
-class KeywordInvalidError extends AppError {
-  constructor(keyword = null) {
-    super('Keyword\'s invalid');
+// class ThresholdInvalidError extends AppError {
+//   constructor(threshold = null) {
+//     super('Threshold\'s invalid');
 
-    this.keyword = keyword;
-  }
-}
+//     this.threshold = threshold;
+//   }
+// }
 
-class KeywordDuplicationError extends AppError {
-  constructor(keyword = null) {
-    super('Keyword\'s already submitted');
+// class KeywordInvalidError extends AppError {
+//   constructor(keyword = null) {
+//     super('Keyword\'s invalid');
 
-    this.keyword = keyword;
-  }
-}
+//     this.keyword = keyword;
+//   }
+// }
+
+// class KeywordDuplicationError extends AppError {
+//   constructor(keyword = null) {
+//     super('Keyword\'s already submitted');
+
+//     this.keyword = keyword;
+//   }
+// }
 
 export default {
-  ThresholdInvalidError,
-  KeywordInvalidError,
-  KeywordDuplicationError,
+  UnknownCorrelationIdError,
 };
