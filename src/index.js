@@ -5,9 +5,20 @@ import {
   ObjectId,
 } from 'mongorito';
 import timestamps from 'mongorito-timestamps';
+import {
+  LeagueService,
+  League,
+} from '~/league.js';
+import {
+  TeamService,
+  Team,
+} from '~/team.js';
 import uuidv1 from 'uuid/v1';
 import Match from '~/model.js';
 import Errors from '~/errors.js';
+
+const leagueService = LeagueService;
+const teamService = TeamService;
 
 /*
   Errors
@@ -42,6 +53,8 @@ async function initDbConnection() {
   db.use(timestamps());
   // registering model
   db.register(Match);
+  db.register(League);
+  db.register(Team);
 }
 
 async function initRabbitMQConnection() {
@@ -51,7 +64,7 @@ async function initRabbitMQConnection() {
     Creating queues that service depends on
    */
   await channel.assertQueue(QueueTypes.FIND_OR_CREATE_MATCH);
-  await channel.assertQueue(QueueTypes.UPDATE_LEAGUE_RELATION);
+  // await channel.assertQueue(QueueTypes.UPDATE_LEAGUE_RELATION);
 
   // one by one
   await channel.prefetch(1);
@@ -73,10 +86,10 @@ async function main() {
    */
   async function findOrCreateMatch(message) {
     try {
-      console.log('-= Incoming match =-');
       /*
-        Parse data
+        Data conversion
        */
+      console.log('-= Incoming match =-');
       let {
         content,
       } = message;
@@ -90,8 +103,11 @@ async function main() {
         game,
       } = content;
 
+      date = new Date(date);
+
       /*
-        Validation TODO. REGEXP
+        Validation
+        TODO. REGEXP
        */
       console.log('-= Validation =-');
       console.log('a.) schema');
@@ -100,48 +116,53 @@ async function main() {
       // done fail
 
       /*
-        Data conversion
+        League service
        */
-      date = new Date(date);
+
+      // const {
+      //   leagueId, // isunique?, leagueid,
+      //   isLeagueUnique,
+      // } = await leagueService(league);
+      const leagueId = 0;
 
       /*
-        Generate correlation ids for each data
+        Team service
        */
-      const leagueCorrelationId = uuidv1();
-      const homeTeamCorrelationId = uuidv1();
-      const awayTeamCorrelationId = uuidv1();
-      const gameCorrelationId = uuidv1();
+
+      const {
+        teamId: homeTeamId,
+        isTeamUnique: isHomeTeamUnique,
+      } = await teamService(homeTeam);
 
       /*
         Save match
        */
-      // we store correlationids for each resource (team, league, game) to connect them later
       const {
         id: matchId,
       } = await new Match({
-        homeTeamId: homeTeamCorrelationId,
-        awayTeamId: awayTeamCorrelationId,
-        leagueId: leagueCorrelationId,
-        gameId: gameCorrelationId,
+        homeTeamId,
+        awayTeamId: awayTeam,
+        leagueId,
+        gameId: game,
         score: '',
         date,
       }).save();
 
-      console.log('-= Saving entity =-');
-      console.log(`entity_id: ${matchId}`);
+      // console.log('-= Saving entity =-');
+      // console.log(`entity_id: ${matchId}`);
 
       /*
         Messaging
         Requests to another services
        */
-      const leagueMessage = new Buffer(JSON.stringify({
-        league,
-      }));
+      // const leagueMessage = new Buffer(JSON.stringify({
+      //   league,
+      // }));
 
-      await channel.sendToQueue(QueueTypes.FIND_OR_CREATE_LEAGUE, leagueMessage, {
-        replyTo: QueueTypes.UPDATE_LEAGUE_RELATION,
-        correlationId: leagueCorrelationId,
-      });
+      // await channel.sendToQueue(QueueTypes.FIND_OR_CREATE_LEAGUE, leagueMessage, {
+      //   replyTo: QueueTypes.UPDATE_LEAGUE_RELATION,
+      //   correlationId: leagueCorrelationId,
+      // });
       return channel.ack(message); // we disable this so we can debug freely
     } catch (error) {
       console.log(error)
