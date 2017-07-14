@@ -119,20 +119,20 @@ async function main() {
         League service
        */
 
-      // const {
-      //   leagueId, // isunique?, leagueid,
-      //   isLeagueUnique,
-      // } = await leagueService(league);
-      const leagueId = 0;
+      console.log(content)
+      const {
+        leagueId, // isunique?, leagueid,
+        isLeagueUnique,
+      } = await leagueService(league);
 
       /*
         Team service
        */
 
-      const {
-        teamId: homeTeamId,
-        isTeamUnique: isHomeTeamUnique,
-      } = await teamService(homeTeam);
+      // const {
+      //   teamId: homeTeamId,
+      //   isTeamUnique: isHomeTeamUnique,
+      // } = await teamService(homeTeam);
 
       /*
         Save match
@@ -140,8 +140,8 @@ async function main() {
       const {
         id: matchId,
       } = await new Match({
-        homeTeamId,
-        awayTeamId: awayTeam,
+        homeTeamId: 0,
+        awayTeamId: 0,
         leagueId,
         gameId: game,
         score: '',

@@ -1,24 +1,7 @@
 import {
   Model,
 } from 'mongorito';
-import {
-  similarity,
-} from 'talisman/metrics/distance/dice';
-
-function calculateSimilarity(from, to, threshold = 0.85) {
-  const value = similarity(from, to); // calculate value of similarity
-  const isSimilar = value >= threshold; // is it between range?
-  console.log('-= Calculating similarity =-');
-  console.log(`entity_from: ${from}`);
-  console.log(`entity_to: ${to}`);
-  console.log(`threshold: ${threshold}`);
-  console.log(`index: ${value}`);
-  console.log(`related: ${isSimilar}`);
-  return {
-    isSimilar,
-    value,
-  };
-}
+import similarityCalculation from '~/similarity-calculation';
 
 class League extends Model {
   static collection() {
@@ -64,6 +47,12 @@ async function LeagueService(leaguenameToFind = null) {
 
   // store saved or queried leagueid
   let leagueId = null;
+  // take it as true by default
+  let isLeagueUnique = true;
+  const relatedLeague = {
+    data: null,
+    value: null,
+  };
 
   // we automatically store when we've empty db
   if (leagues.length === 0) {
@@ -74,14 +63,11 @@ async function LeagueService(leaguenameToFind = null) {
     }).save();
     // save ref
     leagueId = savedLeagueId;
+    return {
+      leagueId,
+      isLeagueUnique,
+    };
   }
-
-  // take it as true by default
-  let isLeagueUnique = true;
-  const relatedLeague = {
-    data: null,
-    value: null,
-  };
 
   // we check for similar entities and save if it's really unique
   for (const league of leagues) { // eslint-disable-line
@@ -91,31 +77,29 @@ async function LeagueService(leaguenameToFind = null) {
 
     // get collision results
     const {
-      isSimilar,
-      value,
-    } = calculateSimilarity(leaguenameInDB, leaguenameToCheck, 0.85);
+      eudex: eudexValue, // boolean
+      dice: diceValue, // int
+      mra: mraValue, // obj = minimum (int), similarity (int), codex (array), matching (boolean)
+      jaroWinkler: jaroWinklerValue, // int
+      levenshtein: levenshteinValue,
+    } = similarityCalculation(leaguenameInDB, leaguenameToCheck);
 
     // we first check if it's strictly equal and if not, then we set league as not unique
     // we need this check because in second check
     // there could be case when it's similar but not strictly equal
     if (leaguenameToCheck === leaguenameInDB) {
       relatedLeague.data = await league.get(); // eslint-disable-line
-      relatedLeague.value = value; // store how like it's similar
       leagueId = await league.get('_id'); // eslint-disable-line
       isLeagueUnique = false;
     }
 
-    // store as similar in unique one when it's not strictly equal
-    if (isSimilar && leaguenameToCheck !== leaguenameInDB) {
-      if (relatedLeague.value < value) {
+    if (leaguenameToCheck !== leaguenameInDB) {
+      if (jaroWinklerValue >= 0.8 && diceValue >= 0.7 && levenshteinValue >= 2) {
         relatedLeague.data = await league.get(); // eslint-disable-line
-        relatedLeague.value = value;
         leagueId = await league.get('_id'); // eslint-disable-line
         // store as similar
         isLeagueUnique = false;
       }
-      // we save it anyway
-      await league.addSimilar(leaguenameToCheck, value); // eslint-disable-line
     }
   }
 
