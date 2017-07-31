@@ -1,28 +1,6 @@
 import {
   Model,
 } from 'mongorito';
-import {
-  similarity,
-} from 'talisman/metrics/distance/dice';
-import {
-  isSimilar,
-} from 'talisman/metrics/distance/eudex';
-
-
-function calculateSimilarity(from, to, threshold = 0.85) {
-  const value = similarity(from, to); // calculate value of similarity
-  const isSimilar = value >= threshold; // is it between range?
-  console.log('-= Calculating similarity =-');
-  console.log(`entity_from: ${from}`);
-  console.log(`entity_to: ${to}`);
-  console.log(`threshold: ${threshold}`);
-  console.log(`index: ${value}`);
-  console.log(`related: ${isSimilar}`);
-  return {
-    isSimilar,
-    value,
-  };
-}
 
 class Team extends Model {
   static collection() {

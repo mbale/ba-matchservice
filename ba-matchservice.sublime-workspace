@@ -1,0 +1,274 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"path",
+				"pathCapitalized"
+			],
+			[
+				"consol",
+				"console_log"
+			],
+			[
+				"time",
+				"timestamps"
+			],
+			[
+				"Entt",
+				"EntityNotFoundError"
+			],
+			[
+				"Entity",
+				"EntityNotFoundError"
+			],
+			[
+				"EntityN",
+				"EntityNotFoundByError"
+			],
+			[
+				"userBy",
+				"userByToken"
+			],
+			[
+				"try",
+				"try_catch"
+			],
+			[
+				"Invalid",
+				"InvalidCountryCodeError"
+			],
+			[
+				"element",
+				"getElementById〔function〕"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 400.0,
+		"last_filter": "packa",
+		"selected_items":
+		[
+			[
+				"packa",
+				"Package Control: Install Package"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
+				"packag",
+				"Package Control: Install Package"
+			],
+			[
+				"package",
+				"Package Control: Install Package"
+			],
+			[
+				"isnta",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 544.0
+	},
+	"console":
+	{
+		"height": 130.0,
+		"history":
+		[
+			"import urllib.request,os,hashlib; h = 'df21e130d211cfc94d9b0905775a7c0f' + '1e3d39e33b79698005270310898eea76'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/Users/balikiraly/Repositories/ba-matchservice"
+	],
+	"file_history":
+	[
+		"/Users/balikiraly/Repositories/ba-backend/node_modules/blipp/coverage.html",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/users-controller.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/entity-taken-error.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/entity-not-found-error.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/utils.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/models/plugins/user-plugins.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/bookmaker-controller.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/routes/bookmaker-routes.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/routes/index.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/auth-controller.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/index.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/user-controller.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/models/user-model.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/entity-not-found-by.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/routes/usersRoutes.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/routes/sportsbooksRoutes.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/bookmakers-controller.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/routes/userRoutes.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/usernameTakenError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/usernameNotFoundError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/userBySteamIdNotFoundError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/steamIDTakenError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/sportsbookNotFoundByNameError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/sportsbookNotFoundByIdError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/sportsbookNameTakenError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/sportsbookAlreadyReviewedError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/passwordMismatchError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/invalidUserIdError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/invalidCountryCodeError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/errors/emailTakenError.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/models/plugins/userPlugins.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/routes/auth-routes.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/usersController.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/models/team-model.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/match-controller.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/routes/match-routes.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/models/errors/entity-not-found-error.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/userController.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/models/match-model.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/models/errors/invalidCountryCodeError.js",
+		"/Users/balikiraly/Repositories/ba-backend/ba-backend.sublime-project",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/matchesController.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/controllers/sportsbooksController.js",
+		"/Users/balikiraly/Repositories/ba-backend/src/routes/matchesController.js",
+		"/Users/balikiraly/Repositories/ba-backend/.env"
+	],
+	"find":
+	{
+		"height": 22.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 21.0
+	},
+	"input":
+	{
+		"height": 27.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "ba-matchservice.sublime-project",
+	"replace":
+	{
+		"height": 40.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 248.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

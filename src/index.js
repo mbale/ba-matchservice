@@ -2,44 +2,30 @@ import dotenv from 'dotenv';
 import amqplib from 'amqplib';
 import {
   Database,
-  ObjectId,
 } from 'mongorito';
 import timestamps from 'mongorito-timestamps';
-import {
-  LeagueService,
-  League,
-} from '~/league.js';
-import {
-  TeamService,
-  Team,
-} from '~/team.js';
-import uuidv1 from 'uuid/v1';
-import Match from '~/model.js';
-import Errors from '~/errors.js';
+import Joi from 'joi';
+import Utils from '~/utils.js';
+import MatchService from '~/match.js';
+import LeagueService from '~/league.js';
 
-const leagueService = LeagueService;
-const teamService = TeamService;
+const schema = Joi.object().keys({
+  homeTeam: Joi.string().required(),
+  awayTeam: Joi.string().required(),
+  league: Joi.string().required(),
+  game: Joi.string().required(),
+  date: Joi.string().isoDate().required(),
+});
 
-/*
-  Errors
- */
-const {
-  UnknownCorrelationIdError,
-} = Errors;
+dotenv.config();
 
 /*
   Queue declarations
  */
 const QueueTypes = {
-  UPDATE_LEAGUE_RELATION: 'matches.updateLeagueRelation',
-  FIND_OR_CREATE_MATCH: 'matches',
-  FIND_OR_CREATE_LEAGUE: 'leagues',
+  CREATE_MATCH: 'matches',
+  FAILED_MATCH: 'failed_matches',
 };
-
-/*
-  Init
- */
-dotenv.config();
 
 /*
   Db
@@ -52,9 +38,8 @@ async function initDbConnection() {
   // plugin
   db.use(timestamps());
   // registering model
-  db.register(Match);
-  db.register(League);
-  db.register(Team);
+  db.register(MatchService.model);
+  db.register(LeagueService.model);
 }
 
 async function initRabbitMQConnection() {
@@ -63,8 +48,8 @@ async function initRabbitMQConnection() {
   /*
     Creating queues that service depends on
    */
-  await channel.assertQueue(QueueTypes.FIND_OR_CREATE_MATCH);
-  // await channel.assertQueue(QueueTypes.UPDATE_LEAGUE_RELATION);
+  await channel.assertQueue(QueueTypes.CREATE_MATCH);
+  await channel.assertQueue(QueueTypes.FAILED_MATCH);
 
   // one by one
   await channel.prefetch(1);
@@ -82,161 +67,70 @@ async function main() {
   const channel = await initRabbitMQConnection();
 
   /*
-    Handles match saving with requests to another services
-   */
-  async function findOrCreateMatch(message) {
+    Consumers
+  */
+  channel.consume(QueueTypes.CREATE_MATCH, async (message) => {
     try {
-      /*
-        Data conversion
-       */
-      console.log('-= Incoming match =-');
-      let {
-        content,
-      } = message;
-      content = JSON.parse(content.toString());
+      const {
+        content: matchData,
+      } = Utils.getContentAsJSON(message);
 
-      let {
+      console.log(matchData);
+
+      if (process.env.VALIDATE_BASE === 'true') {
+        Utils.validateSchema(matchData, schema);
+      }
+
+      const {
         homeTeam,
         awayTeam,
         league,
-        date,
         game,
-      } = content;
-
-      date = new Date(date);
-
-      /*
-        Validation
-        TODO. REGEXP
-       */
-      console.log('-= Validation =-');
-      console.log('a.) schema');
-      // done fail
-      console.log('b.) duplication integrity');
-      // done fail
-
-      /*
-        League service
-       */
-
-      console.log(content)
-      const {
-        leagueId, // isunique?, leagueid,
-        isLeagueUnique,
-      } = await leagueService(league);
-
-      /*
-        Team service
-       */
-
-      // const {
-      //   teamId: homeTeamId,
-      //   isTeamUnique: isHomeTeamUnique,
-      // } = await teamService(homeTeam);
-
-      /*
-        Save match
-       */
-      const {
-        id: matchId,
-      } = await new Match({
-        homeTeamId: 0,
-        awayTeamId: 0,
-        leagueId,
-        gameId: game,
-        score: '',
         date,
-      }).save();
+      } = matchData;
 
-      // console.log('-= Saving entity =-');
-      // console.log(`entity_id: ${matchId}`);
+      let leagueId = null;
+      const matchId = '';
+      const gameId = '';
+      const homeTeamId = '';
+      const awayTeamId = '';
 
       /*
-        Messaging
-        Requests to another services
-       */
-      // const leagueMessage = new Buffer(JSON.stringify({
-      //   league,
-      // }));
+        League
+      */
+      const leagueService = new LeagueService(league, {
+        validate: false,
+      });
+      await leagueService.init();
 
-      // await channel.sendToQueue(QueueTypes.FIND_OR_CREATE_LEAGUE, leagueMessage, {
-      //   replyTo: QueueTypes.UPDATE_LEAGUE_RELATION,
-      //   correlationId: leagueCorrelationId,
-      // });
-      return channel.ack(message); // we disable this so we can debug freely
+      const {
+        unique,
+        data: leagueData,
+      } = await leagueService.similarityCheck();
+
+      if (unique) {
+        const {
+          id: savedLeagueId,
+        } = await leagueService.save();
+
+        // store saved leagueid
+        leagueId = savedLeagueId;
+      } else {
+        const {
+          id: leagueIdInDb,
+        } = leagueData;
+
+        // store similar leagueid
+        leagueId = leagueIdInDb;
+      }
+
+
+      //return channel.ack(message);
     } catch (error) {
       console.log(error)
+      return channel.nack(message);
     }
-  }
-
-  /*
-    Update stored match league referency by correlationId
-   */
-  async function updateLeagueRelation(message) {
-    /*
-      Parsing data
-      leaguecorrelationid: we know which match
-      leagueid: leagueid of match to relate
-     */
-    try {
-      const {
-        content,
-        properties: {
-          correlationId: leagueCorrelationId,
-        },
-      } = message;
-
-      let {
-        leagueId,
-      } = JSON.parse(content.toString());
-      leagueId = new ObjectId(leagueId);
-
-      /*
-        Logging
-       */
-      console.log('-= Updating match relation with league =-');
-      console.log(`correlation_id: ${leagueCorrelationId}`);
-      console.log(`league_id: ${leagueId}`);
-
-      // find match based on correlationid when we saved match
-      const match = await Match.findOne({
-        leagueId: leagueCorrelationId,
-      });
-
-      /*
-        Assigning leagueid to correct match
-       */
-      if (match) {
-        const {
-          id,
-        } = await match.get();
-        console.log(`match_id: ${id}`);
-
-        // TODO: commit phase change
-        // saving leagueid for match
-        match.set('leagueId', leagueId);
-        await match.save();
-
-        // everything went well
-        channel.ack(message);
-      } else {
-        throw new UnknownCorrelationIdError(leagueCorrelationId, 'league');
-      }
-    } catch (error) {
-      if (error instanceof UnknownCorrelationIdError) {
-        console.log(error.message);
-        console.log(error.correlationId);
-        console.log(error.type);
-        // channel.nack(message); due to debug we disable nacking
-      }
-    }
-  }
-
-  /*
-    Consumers
-  */
-  channel.consume(QueueTypes.FIND_OR_CREATE_MATCH, findOrCreateMatch);
-  channel.consume(QueueTypes.UPDATE_LEAGUE_RELATION, updateLeagueRelation);
+  });
 }
 
 main();

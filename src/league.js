@@ -1,7 +1,11 @@
 import {
   Model,
+  ObjectId,
 } from 'mongorito';
-import similarityCalculation from '~/similarity-calculation';
+import Joi from 'joi';
+import Utils from '~/utils.js';
+
+const schema = Joi.string().required();
 
 class League extends Model {
   static collection() {
@@ -9,116 +13,120 @@ class League extends Model {
   }
 }
 
-League.prototype.addSimilar = async function addSimilar(keyword, threshold) {
-  try {
-    if (!keyword || typeof keyword !== 'string') {
-      throw new Error(keyword);
-    }
-
-    if (!threshold || typeof threshold !== 'number') {
-      throw new Error(threshold);
-    }
-
-    const similarKeywords = await this.get('keywords.similar') || [];
-
-    // check for duplication
-    const isDupe = similarKeywords.find(similar => similar.keyword === keyword);
-
-    if (!isDupe) {
-      similarKeywords.push({
-        keyword,
-        threshold,
-      });
-
-      this.set('keywords.similar', similarKeywords);
-      await this.save();
-    }
-  } catch (error) {
-    throw error;
-  }
-};
-
-async function LeagueService(leaguenameToFind = null) {
-  // get all leagues
-  const leagues = await League.find();
-
-  // store leaguename to check
-  const leaguenameToCheck = leaguenameToFind;
-
-  // store saved or queried leagueid
-  let leagueId = null;
-  // take it as true by default
-  let isLeagueUnique = true;
-  const relatedLeague = {
-    data: null,
-    value: null,
-  };
-
-  // we automatically store when we've empty db
-  if (leagues.length === 0) {
-    const {
-      id: savedLeagueId,
-    } = await new League({
-      name: leaguenameToCheck,
-    }).save();
-    // save ref
-    leagueId = savedLeagueId;
-    return {
-      leagueId,
-      isLeagueUnique,
+class LeagueService {
+  constructor(league, opts = {}) {
+    this.opts = opts;
+    this.league = league;
+    this.leagues = null;
+    this.state = {
+      unique: null,
+      data: null,
     };
   }
 
-  // we check for similar entities and save if it's really unique
-  for (const league of leagues) { // eslint-disable-line
-    const {
-      name: leaguenameInDB,
-    } = await league.get(); // eslint-disable-line
+  static get model() {
+    return League;
+  }
 
-    // get collision results
-    const {
-      eudex: eudexValue, // boolean
-      dice: diceValue, // int
-      mra: mraValue, // obj = minimum (int), similarity (int), codex (array), matching (boolean)
-      jaroWinkler: jaroWinklerValue, // int
-      levenshtein: levenshteinValue,
-    } = similarityCalculation(leaguenameInDB, leaguenameToCheck);
+  static get schema() {
+    return schema;
+  }
 
-    // we first check if it's strictly equal and if not, then we set league as not unique
-    // we need this check because in second check
-    // there could be case when it's similar but not strictly equal
-    if (leaguenameToCheck === leaguenameInDB) {
-      relatedLeague.data = await league.get(); // eslint-disable-line
-      leagueId = await league.get('_id'); // eslint-disable-line
-      isLeagueUnique = false;
+  async init() {
+    this.leagues = await League.find();
+  }
+
+  async save() {
+    const name = this.league;
+
+    await new League({
+      name,
+    }).save();
+  }
+
+  setState(unique = false, data = {}) {
+    this.state.unique = unique;
+    this.state.data = data;
+  }
+
+  async similarityCheck() {
+    const leagues = this.leagues;
+    const leaguenameToCheck = this.league;
+    const state = this.state;
+    const {
+      algoCheck = true,
+    } = this.opts;
+
+    if (leagues.length === 0) {
+      this.setState(true);
+      return state;
     }
 
-    if (leaguenameToCheck !== leaguenameInDB) {
-      if (jaroWinklerValue >= 0.8 && diceValue >= 0.7 && levenshteinValue >= 2) {
-        relatedLeague.data = await league.get(); // eslint-disable-line
-        leagueId = await league.get('_id'); // eslint-disable-line
-        // store as similar
-        isLeagueUnique = false;
+    const relatedLeagues = [];
+
+    // we check similarity with every entity in db
+    for (const league of leagues) { // eslint-disable-line
+      const {
+        _id: leagueIdInDb,
+        name: leaguenameInDb,
+      } = await league.get(); // eslint-disable-line
+
+      const {
+        dice: diceValue, // int
+        levenshtein: levenshteinValue,
+      } = Utils.similarityCalculation(leaguenameInDb, leaguenameToCheck);
+
+      const strictlyEquals = leaguenameInDb === leaguenameToCheck;
+
+      // strictly equal
+      if (strictlyEquals) {
+        relatedLeagues.push(Utils.similarityType('strict', leaguenameInDb, {
+          id: new ObjectId(leagueIdInDb),
+        }));
+      }
+
+      if (algoCheck && !strictlyEquals &&
+        diceValue >= 0.7 && levenshteinValue <= 2) {
+        // similar but char differences are between ]0,2] equal by length
+        relatedLeagues.push(Utils.similarityType('algo', leaguenameInDb, {
+          similarity: diceValue,
+          distance: levenshteinValue,
+          id: new ObjectId(leagueIdInDb),
+        }));
       }
     }
-  }
 
-  // store it as unique
-  if (isLeagueUnique) {
+    if (relatedLeagues.length === 0) {
+      this.setState(true);
+      return state;
+    }
+
+    const isMatchByStrict = relatedLeagues.find(relatedLeague => relatedLeague.type === 'strict');
+
+    if (isMatchByStrict) {
+      const {
+        data: {
+          id,
+        },
+      } = isMatchByStrict;
+
+      this.setState(false, {
+        id,
+      });
+      return state;
+    }
+
+    const sortBySimiliarity = relatedLeagues.sort((a, b) => (a.similarity - b.similarity));
+
     const {
-      id: savedLeagueId,
-    } = await new League({
-      name: leaguenameToCheck,
-    }).save();
-    leagueId = savedLeagueId;
+      id,
+    } = sortBySimiliarity[sortBySimiliarity.length - 1];
+
+    this.setState(false, {
+      id,
+    });
+    return state;
   }
-  return {
-    leagueId,
-    isLeagueUnique,
-  };
 }
 
-export {
-  LeagueService,
-  League,
-};
+export default LeagueService;

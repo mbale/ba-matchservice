@@ -16,6 +16,7 @@
     "bluebird": "^3.5.0",
     "cote": "^0.13.2",
     "dotenv": "^4.0.0",
+    "joi": "^10.6.0",
     "lodash": "^4.17.4",
     "mongorito": "^3.0.1",
     "mongorito-timestamps": "^1.0.0",

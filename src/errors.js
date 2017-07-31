@@ -11,6 +11,16 @@ class AppError extends Error {
   }
 }
 
+class InvalidSchemaError extends Error {
+  constructor(schema, data, error) {
+    super(`${schema} schema validation failed with error: ${error}`);
+
+    this.schema = schema;
+    this.data = data;
+    this.error = error;
+  }
+}
+
 class UnknownCorrelationIdError extends AppError {
   constructor(correlationId = null, type = null) {
     super('Correlation Id\'s not found');
@@ -46,4 +56,5 @@ class UnknownCorrelationIdError extends AppError {
 
 export default {
   UnknownCorrelationIdError,
+  InvalidSchemaError,
 };
