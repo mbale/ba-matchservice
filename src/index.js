@@ -4,6 +4,7 @@ import {
   Database,
 } from 'mongorito';
 import timestamps from 'mongorito-timestamps';
+import Raven from 'raven';
 import Joi from 'joi';
 import Utils from '~/utils.js';
 import MatchService from '~/match.js';
@@ -18,6 +19,8 @@ const schema = Joi.object().keys({
 });
 
 dotenv.config();
+
+Raven.config(process.env.SENTRY_DSN).install();
 
 /*
   Queue declarations
