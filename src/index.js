@@ -6,10 +6,10 @@ import {
 import timestamps from 'mongorito-timestamps';
 import Raven from 'raven';
 import Joi from 'joi';
-import Utils from '~/utils.js';
-import MatchService from '~/match.js';
-import LeagueService from '~/league.js';
-import TeamService from '~/team.js';
+import Utils from './utils.js';
+import MatchService from './match.js';
+import LeagueService from './league.js';
+import TeamService from './team.js';
 
 const schema = Joi.object().keys({
   homeTeam: Joi.string().required(),

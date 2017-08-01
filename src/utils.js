@@ -8,7 +8,7 @@ import {
 import jaroWinkler from 'talisman/metrics/distance/jaro-winkler';
 import mra from 'talisman/metrics/distance/mra';
 import levenshtein from 'talisman/metrics/distance/levenshtein';
-import Errors from '~/errors.js';
+import Errors from './errors.js';
 
 const {
   InvalidSchemaError,

@@ -3,7 +3,7 @@ import {
   ObjectId,
 } from 'mongorito';
 import Joi from 'joi';
-import Utils from '~/utils.js';
+import Utils from './utils.js';
 
 const schema = Joi.string().required();
 
