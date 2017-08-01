@@ -144,7 +144,7 @@ async function main() {
 
       //return channel.ack(message);
     } catch (error) {
-      console.log(error)
+      Raven.captureException(error);
       return channel.nack(message);
     }
   });
