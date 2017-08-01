@@ -18,10 +18,15 @@ class LeagueService {
     this.opts = opts;
     this.league = league;
     this.leagues = null;
-    this.state = {
-      unique: null,
-      data: null,
-    };
+
+    const {
+      validate = true,
+    } = opts;
+
+    // check if we need to validate passed league data
+    if (validate) {
+      Utils.validateSchema(league, schema);
+    }
   }
 
   static get model() {
@@ -44,22 +49,23 @@ class LeagueService {
     }).save();
   }
 
-  setState(unique = false, data = {}) {
-    this.state.unique = unique;
-    this.state.data = data;
+  setState(unique = true, id = false) {
+    this.state = {
+      unique,
+      id,
+    };
   }
 
   async similarityCheck() {
     const leagues = this.leagues;
     const leaguenameToCheck = this.league;
-    const state = this.state;
     const {
       algoCheck = true,
     } = this.opts;
 
     if (leagues.length === 0) {
-      this.setState(true);
-      return state;
+      this.setState();
+      return this.state;
     }
 
     const relatedLeagues = [];
@@ -71,11 +77,6 @@ class LeagueService {
         name: leaguenameInDb,
       } = await league.get(); // eslint-disable-line
 
-      const {
-        dice: diceValue, // int
-        levenshtein: levenshteinValue,
-      } = Utils.similarityCalculation(leaguenameInDb, leaguenameToCheck);
-
       const strictlyEquals = leaguenameInDb === leaguenameToCheck;
 
       // strictly equal
@@ -85,20 +86,26 @@ class LeagueService {
         }));
       }
 
-      if (algoCheck && !strictlyEquals &&
-        diceValue >= 0.7 && levenshteinValue <= 2) {
-        // similar but char differences are between ]0,2] equal by length
-        relatedLeagues.push(Utils.similarityType('algo', leaguenameInDb, {
-          similarity: diceValue,
-          distance: levenshteinValue,
-          id: new ObjectId(leagueIdInDb),
-        }));
+      if (algoCheck && !strictlyEquals) {
+        const {
+          dice: diceValue, // int
+          levenshtein: levenshteinValue,
+        } = Utils.similarityCalculation(leaguenameInDb, leaguenameToCheck);
+
+        if (diceValue >= 0.7 && levenshteinValue <= 2) {
+          // similar but char differences are between ]0,2] equal by length
+          relatedLeagues.push(Utils.similarityType('algo', leaguenameInDb, {
+            similarity: diceValue,
+            distance: levenshteinValue,
+            id: new ObjectId(leagueIdInDb),
+          }));
+        }
       }
     }
 
     if (relatedLeagues.length === 0) {
-      this.setState(true);
-      return state;
+      this.setState();
+      return this.state;
     }
 
     const isMatchByStrict = relatedLeagues.find(relatedLeague => relatedLeague.type === 'strict');
@@ -110,22 +117,19 @@ class LeagueService {
         },
       } = isMatchByStrict;
 
-      this.setState(false, {
-        id,
-      });
-      return state;
+      this.setState(false, id);
+      return this.state;
     }
 
-    const sortBySimiliarity = relatedLeagues.sort((a, b) => (a.similarity - b.similarity));
+    const sortBySimiliarity = relatedLeagues.sort((a, b) =>
+      (a.data.similarity - b.data.similarity));
 
     const {
       id,
     } = sortBySimiliarity[sortBySimiliarity.length - 1];
 
-    this.setState(false, {
-      id,
-    });
-    return state;
+    this.setState(false, id);
+    return this.state;
   }
 }
 

@@ -1,6 +1,11 @@
 import {
   Model,
+  ObjectId,
 } from 'mongorito';
+import Joi from 'joi';
+import Utils from '~/utils.js';
+
+const schema = Joi.string().required();
 
 class Team extends Model {
   static collection() {
@@ -8,115 +13,126 @@ class Team extends Model {
   }
 }
 
-Team.prototype.addSimilar = async function addSimilar(keyword, threshold) {
-  try {
-    if (!keyword || typeof keyword !== 'string') {
-      throw new Error(keyword);
-    }
+class TeamService {
+  constructor(team, opts = {}) {
+    this.opts = opts;
+    this.team = team;
+    this.teams = null;
 
-    if (!threshold || typeof threshold !== 'number') {
-      throw new Error(threshold);
-    }
-
-    const similarKeywords = await this.get('keywords.similar') || [];
-
-    // check for duplication
-    const isDupe = similarKeywords.find(similar => similar.keyword === keyword);
-
-    if (!isDupe) {
-      similarKeywords.push({
-        keyword,
-        threshold,
-      });
-
-      this.set('keywords.similar', similarKeywords);
-      await this.save();
-    }
-  } catch (error) {
-    throw error;
-  }
-};
-
-async function TeamService(teamnameToFind = null) {
-  // get all teams
-  const teams = await Team.find();
-
-  // store teamname to check
-  const teamnameToCheck = teamnameToFind;
-
-  // store saved or queried teamid
-  let teamId = null;
-
-  // we automatically store when we've empty db
-  if (teams.length === 0) {
     const {
-      id: savedTeamId,
-    } = await new Team({
-      name: teamnameToCheck,
+      validate = true,
+    } = opts;
+
+    // check if we need to validate passed league data
+    if (validate) {
+      Utils.validateSchema(team, schema);
+    }
+  }
+
+  static get model() {
+    return Team;
+  }
+
+  static get schema() {
+    return schema;
+  }
+
+  async init() {
+    this.teams = await Team.find();
+  }
+
+  async save() {
+    const name = this.team;
+
+    await new Team({
+      name,
     }).save();
-    // save ref
-    teamId = savedTeamId;
   }
 
-  // take it as true by default
-  let isTeamUnique = true;
-  const relatedTeam = {
-    data: null,
-    value: null,
-  };
+  setState(unique = true, id = false) {
+    this.state = {
+      unique,
+      id,
+    };
+  }
 
-  // we check for similar entities and save if it's really unique
-  for (const team of teams) { // eslint-disable-line
+  async similarityCheck() {
+    const teams = this.teams;
+    const teamnameToCheck = this.team;
     const {
-      name: teamnameInDB,
-    } = await team.get(); // eslint-disable-line
+      algoCheck = true,
+    } = this.opts;
 
-    // get collision results
-    const {
-      isSimilar,
-      value,
-    } = calculateSimilarity(teamnameInDB, teamnameToCheck, 0.85);
-
-    // we first check if it's strictly equal and if not, then we set team as not unique
-    // we need this check because in second check
-    // there could be case when it's similar but not strictly equal
-    if (teamnameToCheck === teamnameInDB) {
-      relatedTeam.data = await team.get(); // eslint-disable-line
-      relatedTeam.value = value; // store how like it's similar
-      teamId = await team.get('_id'); // eslint-disable-line
-      isTeamUnique = false;
+    if (teams.length === 0) {
+      this.setState();
+      return this.state;
     }
 
-    // store as similar in unique one when it's not strictly equal
-    if (isSimilar && teamnameToCheck !== teamnameInDB) {
-      if (relatedTeam.value < value) {
-        relatedTeam.data = await team.get(); // eslint-disable-line
-        relatedTeam.value = value;
-        teamId = await team.get('_id'); // eslint-disable-line
-        // store as similar
-        isTeamUnique = false;
+    const relatedTeams = [];
+
+    // we check similarity with every entity in db
+    for (const team of teams) { // eslint-disable-line
+      const {
+        _id: teamIdInDb,
+        name: teamnameInDb,
+      } = await team.get(); // eslint-disable-line
+
+      const strictlyEquals = teamnameInDb === teamnameToCheck;
+
+      // strictly equal
+      if (strictlyEquals) {
+        relatedTeams.push(Utils.similarityType('strict', teamnameInDb, {
+          id: new ObjectId(teamIdInDb),
+        }));
       }
-      // we save it anyway
-      await team.addSimilar(teamnameToCheck, value); // eslint-disable-line
-    }
-  }
 
-  // store it as unique
-  if (isTeamUnique) {
+      if (algoCheck && !strictlyEquals) {
+        const {
+          dice: diceValue, // int
+          levenshtein: levenshteinValue,
+        } = Utils.similarityCalculation(teamnameInDb, teamnameToCheck);
+
+        if (diceValue >= 0.3) {
+          // similar but char differences are between ]0,2] equal by length
+          relatedTeams.push(Utils.similarityType('algo', teamnameInDb, {
+            similarity: diceValue,
+            distance: levenshteinValue,
+            id: new ObjectId(teamIdInDb),
+          }));
+        }
+      }
+    }
+
+    if (relatedTeams.length === 0) {
+      this.setState();
+      return this.state;
+    }
+
+    const isMatchByStrict = relatedTeams.find(relatedTeam => relatedTeam.type === 'strict');
+
+    if (isMatchByStrict) {
+      const {
+        data: {
+          id,
+        },
+      } = isMatchByStrict;
+
+      this.setState(false, id);
+      return this.state;
+    }
+
+    const sortBySimiliarity = relatedTeams.sort((a, b) => (a.data.similarity - b.data.similarity));
+
+    // get higher similar team
     const {
-      id: savedTeamId,
-    } = await new Team({
-      name: teamnameToCheck,
-    }).save();
-    teamId = savedTeamId;
+      data: {
+        id,
+      },
+    } = sortBySimiliarity[sortBySimiliarity.length - 1];
+
+    this.setState(false, id);
+    return this.state;
   }
-  return {
-    teamId,
-    isTeamUnique,
-  };
 }
 
-export {
-  TeamService,
-  Team,
-};
+export default TeamService;

@@ -9,6 +9,7 @@ import Joi from 'joi';
 import Utils from '~/utils.js';
 import MatchService from '~/match.js';
 import LeagueService from '~/league.js';
+import TeamService from '~/team.js';
 
 const schema = Joi.object().keys({
   homeTeam: Joi.string().required(),
@@ -42,6 +43,7 @@ async function initDbConnection() {
   db.use(timestamps());
   // registering model
   db.register(MatchService.model);
+  db.register(TeamService.model);
   db.register(LeagueService.model);
 }
 
@@ -92,40 +94,52 @@ async function main() {
         date,
       } = matchData;
 
-      let leagueId = null;
       const matchId = '';
       const gameId = '';
-      const homeTeamId = '';
-      const awayTeamId = '';
 
       /*
         League
       */
       const leagueService = new LeagueService(league, {
-        validate: false,
+        validate: true,
+        algoCheck: true,
       });
       await leagueService.init();
 
       const {
-        unique,
-        data: leagueData,
+        unique: leagueUnique,
+        id: leagueId,
       } = await leagueService.similarityCheck();
 
-      if (unique) {
-        const {
-          id: savedLeagueId,
-        } = await leagueService.save();
+      /*
+        Team
+      */
 
-        // store saved leagueid
-        leagueId = savedLeagueId;
-      } else {
-        const {
-          id: leagueIdInDb,
-        } = leagueData;
+      const homeTeamService = new TeamService(homeTeam, {
+        validate: true,
+        algoCheck: true,
+      });
+      await homeTeamService.init();
 
-        // store similar leagueid
-        leagueId = leagueIdInDb;
-      }
+      const {
+        unique: homeTeamUnique,
+        id: homeTeamId,
+      } = await homeTeamService.similarityCheck();
+
+      const awayTeamService = new TeamService(awayTeam, {
+        validate: true,
+        algoCheck: true,
+      });
+      await awayTeamService.init();
+
+      const {
+        unique: awayTeamUnique,
+        id: awayTeamId,
+      } = await homeTeamService.similarityCheck();
+
+      console.log(`leagueunique: ${leagueUnique}`)
+      console.log(`hometeamunique: ${homeTeamUnique}`)
+      console.log(`awayteamunique: ${awayTeamUnique}`)
 
 
       //return channel.ack(message);

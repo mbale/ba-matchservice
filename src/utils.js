@@ -59,22 +59,22 @@ class Utils {
     Check similarity between two string
   */
   static similarityCalculation(from, to) {
-    // const eudexValue = isSimilar(from, to); // similar
-    const diceValue = similarity(from, to); // similar
-    const mraValue = mra(from, to); // similar
-    const jaroWinklerValue = jaroWinkler(from, to); // distance
-    const levenshteinValue = levenshtein(from, to); // metric distance
     console.log('-= Calculating similarity =-');
     console.log(`entity_from: ${from}`);
     console.log(`entity_to: ${to}`);
+    // const eudexValue = isSimilar(from, to); // similar
+    const diceValue = similarity(from, to); // similar
+    // const mraValue = mra(from, to); // similar
+    const jaroWinklerValue = jaroWinkler(from, to); // distance
+    const levenshteinValue = levenshtein(from, to); // metric distance
     // console.log(`eudex: ${eudexValue}`);
     console.log(`dice: ${diceValue}`);
-    console.log(`mra: match: ${mraValue.matching}, value: ${mraValue.similarity}`);
-    console.log(`jarowWinkler: ${jaroWinklerValue}`);
-    console.log(`levenshtein: ${levenshteinValue}`);
+    // console.log(`mra: match: ${mraValue.matching}, value: ${mraValue.similarity}`);
+    // console.log(`jarowWinkler: ${jaroWinklerValue}`);
+    // console.log(`levenshtein: ${levenshteinValue}`);
     return {
       dice: diceValue,
-      mra: mraValue,
+      //mra: mraValue,
       jaroWinkler: jaroWinklerValue,
       levenshtein: levenshteinValue,
     };
