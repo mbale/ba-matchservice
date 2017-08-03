@@ -1,6 +1,9 @@
 import {
   Model,
 } from 'mongorito';
+import Joi from 'joi';
+
+const schema = Joi.string().required();
 
 class Match extends Model {
   static collection() {
@@ -9,24 +12,28 @@ class Match extends Model {
 }
 
 class MatchService {
-  constructor(match, opts = {}) {
-    this.opts = opts;
-    this.match = match;
-    this.matches = null;
-  }
-
   static get model() {
     return Match;
   }
 
-  async init() {
-    this.matches = await Match.find();
+  static get schema() {
+    return schema;
   }
 
   async save() {
-    const match = this.match;
+    const {
+      leagueId,
+      gameId,
+      homeTeamId,
+      awayTeamId,
+    } = this.match;
 
-    await new Match(match).save();
+    await new Match({
+      leagueId,
+      gameId,
+      homeTeamId,
+      awayTeamId,
+    }).save();
   }
 }
 

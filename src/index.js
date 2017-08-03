@@ -10,6 +10,7 @@ import Utils from './utils.js';
 import MatchService from './match.js';
 import LeagueService from './league.js';
 import TeamService from './team.js';
+import GameService from './game.js';
 
 const schema = Joi.object().keys({
   homeTeam: Joi.string().required(),
@@ -42,6 +43,7 @@ async function initDbConnection() {
   // plugin
   db.use(timestamps());
   // registering model
+  db.register(GameService.model);
   db.register(MatchService.model);
   db.register(TeamService.model);
   db.register(LeagueService.model);
@@ -91,61 +93,75 @@ async function main() {
         awayTeam,
         league,
         game,
+      } = matchData;
+
+      let {
         date,
       } = matchData;
 
-      const matchId = '';
-      const gameId = '';
+      date = new Date(date);
 
       /*
         League
       */
-      const leagueService = new LeagueService(league, {
-        validate: true,
-        algoCheck: true,
-      });
+      const leagueService = new LeagueService(league);
       await leagueService.init();
 
       const {
         unique: leagueUnique,
         id: leagueId,
-      } = await leagueService.similarityCheck();
+      } = await leagueService.similarityCheck({
+        algoCheck: false,
+      });
 
       /*
         Team
       */
 
-      const homeTeamService = new TeamService(homeTeam, {
-        validate: true,
-        algoCheck: true,
-      });
+      const homeTeamService = new TeamService(homeTeam);
       await homeTeamService.init();
 
       const {
         unique: homeTeamUnique,
         id: homeTeamId,
-      } = await homeTeamService.similarityCheck();
-
-      const awayTeamService = new TeamService(awayTeam, {
-        validate: true,
-        algoCheck: true,
+      } = await homeTeamService.similarityCheck({
+        algoCheck: false,
       });
+
+      const awayTeamService = new TeamService(awayTeam);
       await awayTeamService.init();
 
       const {
         unique: awayTeamUnique,
         id: awayTeamId,
-      } = await homeTeamService.similarityCheck();
+      } = await homeTeamService.similarityCheck({
+        algoCheck: false,
+      });
 
+      /*
+        Game
+      */
+
+      const gameService = new GameService(game);
+      await gameService.init();
+
+      const {
+        unique: gameUnique,
+        id: gameId,
+      } = await gameService.similarityCheck({
+        algoCheck: false,
+      });
+
+      console.log('gameunique:' + gameUnique)
       console.log(`leagueunique: ${leagueUnique}`)
       console.log(`hometeamunique: ${homeTeamUnique}`)
       console.log(`awayteamunique: ${awayTeamUnique}`)
 
-
       //return channel.ack(message);
     } catch (error) {
+      console.log(error)
       Raven.captureException(error);
-      return channel.nack(message);
+      //return channel.nack(message);
     }
   });
 }

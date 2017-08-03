@@ -15,7 +15,6 @@ class Team extends Model {
 
 class TeamService {
   constructor(team, opts = {}) {
-    this.opts = opts;
     this.team = team;
     this.teams = null;
 
@@ -56,12 +55,13 @@ class TeamService {
     };
   }
 
-  async similarityCheck() {
+  async similarityCheck(opts = {}) {
     const teams = this.teams;
     const teamnameToCheck = this.team;
+    const teamnameLowercase = teamnameToCheck.toLowerCase();
     const {
       algoCheck = true,
-    } = this.opts;
+    } = opts;
 
     if (teams.length === 0) {
       this.setState();
@@ -77,7 +77,7 @@ class TeamService {
         name: teamnameInDb,
       } = await team.get(); // eslint-disable-line
 
-      const strictlyEquals = teamnameInDb === teamnameToCheck;
+      const strictlyEquals = teamnameInDb === teamnameLowercase;
 
       // strictly equal
       if (strictlyEquals) {
