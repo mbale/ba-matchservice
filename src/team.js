@@ -43,9 +43,13 @@ class TeamService {
   async save() {
     const name = this.team;
 
-    await new Team({
+    const {
+      id,
+    } = await new Team({
       name,
     }).save();
+
+    return id;
   }
 
   setState(unique = true, id = false) {
@@ -56,6 +60,7 @@ class TeamService {
   }
 
   async similarityCheck(opts = {}) {
+    await this.init();
     const teams = this.teams;
     const teamnameToCheck = this.team;
     const teamnameLowercase = teamnameToCheck.toLowerCase();
@@ -77,7 +82,7 @@ class TeamService {
         name: teamnameInDb,
       } = await team.get(); // eslint-disable-line
 
-      const strictlyEquals = teamnameInDb === teamnameLowercase;
+      const strictlyEquals = teamnameInDb.toLowerCase() === teamnameLowercase;
 
       // strictly equal
       if (strictlyEquals) {

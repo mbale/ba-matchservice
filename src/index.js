@@ -105,7 +105,6 @@ async function main() {
         League
       */
       const leagueService = new LeagueService(league);
-      await leagueService.init();
 
       const {
         unique: leagueUnique,
@@ -119,7 +118,6 @@ async function main() {
       */
 
       const homeTeamService = new TeamService(homeTeam);
-      await homeTeamService.init();
 
       const {
         unique: homeTeamUnique,
@@ -143,7 +141,6 @@ async function main() {
       */
 
       const gameService = new GameService(game);
-      await gameService.init();
 
       const {
         unique: gameUnique,
@@ -152,16 +149,65 @@ async function main() {
         algoCheck: false,
       });
 
+      /*
+        Match
+      */
+
+      const match = {
+        date,
+      };
+
+      if (!leagueUnique) {
+        match.leagueId = leagueId;
+      } else {
+        match.leagueId = await leagueService.save();
+      }
+
+      if (!homeTeamUnique) {
+        match.homeTeamId = homeTeamId;
+      } else {
+        match.homeTeamId = await homeTeamService.save();
+      }
+
+      if (!awayTeamUnique) {
+        match.awayTeamId = awayTeamId;
+      } else {
+        match.awayTeamId = await awayTeamService.save();
+      }
+
+      if (!gameUnique) {
+        match.gameId = gameId;
+      } else {
+        match.gameId = await gameService.save();
+      }
+
+      const matchService = new MatchService(match);
+
+      // check if we have the same match in db
+
+      const similarMatch = await MatchService.model.findOne({
+        homeTeamId: match.homeTeamId,
+        awayTeamId: match.awayTeamId,
+        date,
+      });
+
+      if (similarMatch) {
+        console.log(`found similar match: ${await similarMatch.get('_id')}`);
+      } else {
+        const matchId = await matchService.save();
+        console.log(`saved new match: ${matchId}`);
+      }
+
       console.log('gameunique:' + gameUnique)
       console.log(`leagueunique: ${leagueUnique}`)
       console.log(`hometeamunique: ${homeTeamUnique}`)
       console.log(`awayteamunique: ${awayTeamUnique}`)
 
-      //return channel.ack(message);
+      return channel.ack(message);
     } catch (error) {
-      console.log(error)
+      console.log(error);
       Raven.captureException(error);
-      //return channel.nack(message);
+      return channel.nack(message);
     }
   });
 }

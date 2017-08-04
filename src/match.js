@@ -12,6 +12,10 @@ class Match extends Model {
 }
 
 class MatchService {
+  constructor(match) {
+    this.match = match;
+  }
+
   static get model() {
     return Match;
   }
@@ -21,19 +25,15 @@ class MatchService {
   }
 
   async save() {
-    const {
-      leagueId,
-      gameId,
-      homeTeamId,
-      awayTeamId,
-    } = this.match;
+    const match = this.match;
 
-    await new Match({
-      leagueId,
-      gameId,
-      homeTeamId,
-      awayTeamId,
-    }).save();
+    const {
+      id,
+    } = await new Match(match).save();
+
+    console.log(id)
+
+    return id;
   }
 }
 

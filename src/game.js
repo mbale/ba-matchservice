@@ -43,9 +43,13 @@ class GameService {
   async save() {
     const name = this.game;
 
-    await new Game({
+    const {
+      id,
+    } = await new Game({
       name,
     }).save();
+
+    return id;
   }
 
   setState(unique = true, id = false) {
@@ -56,6 +60,7 @@ class GameService {
   }
 
   async similarityCheck(opts = {}) {
+    await this.init();
     const games = this.games;
     const gamenameToCheck = this.game;
     const gamenameLowercase = gamenameToCheck.toLowerCase();
@@ -77,7 +82,7 @@ class GameService {
         name: gamenameInDb,
       } = await game.get(); // eslint-disable-line
 
-      const strictlyEquals = gamenameInDb === gamenameLowercase;
+      const strictlyEquals = gamenameInDb.toLowerCase() === gamenameLowercase;
 
       // strictly equal
       if (strictlyEquals) {
