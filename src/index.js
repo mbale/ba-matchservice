@@ -8,12 +8,12 @@ import Joi from 'joi';
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
-import Utils from './utils.js';
 import PinnacleService from './sources/pinnacle.js';
 import MatchService from './match.js';
 import LeagueService from './league.js';
 import TeamService from './team.js';
 import GameService from './game.js';
+import Errors from './errors.js';
 
 const schema = Joi.object().keys({
   homeTeam: Joi.string().required(),
@@ -48,12 +48,6 @@ async function initDbConnection() {
 
 async function parseMatch(matchData) {
   try {
-    console.log(matchData);
-
-    if (process.env.VALIDATE_BASE === 'true') {
-      Utils.validateSchema(matchData, schema);
-    }
-
     const {
       homeTeam,
       awayTeam,
@@ -67,9 +61,14 @@ async function parseMatch(matchData) {
 
     date = new Date(date);
 
+    const match = {
+      date,
+    };
+
     /*
       League
     */
+
     const leagueService = new LeagueService(league);
 
     const {
@@ -79,11 +78,18 @@ async function parseMatch(matchData) {
       algoCheck: false,
     });
 
+    if (!leagueUnique) {
+      match.leagueId = leagueId;
+    } else {
+      match.leagueId = await leagueService.save();
+    }
+
     /*
       Team
     */
 
     const homeTeamService = new TeamService(homeTeam);
+    const awayTeamService = new TeamService(awayTeam);
 
     const {
       unique: homeTeamUnique,
@@ -92,15 +98,24 @@ async function parseMatch(matchData) {
       algoCheck: false,
     });
 
-    const awayTeamService = new TeamService(awayTeam);
-    await awayTeamService.init();
+    if (!homeTeamUnique) {
+      match.homeTeamId = homeTeamId;
+    } else {
+      match.homeTeamId = await homeTeamService.save();
+    }
 
     const {
       unique: awayTeamUnique,
       id: awayTeamId,
-    } = await homeTeamService.similarityCheck({
+    } = await awayTeamService.similarityCheck({
       algoCheck: false,
     });
+
+    if (!awayTeamUnique) {
+      match.awayTeamId = awayTeamId;
+    } else {
+      match.awayTeamId = await awayTeamService.save();
+    }
 
     /*
       Game
@@ -115,39 +130,15 @@ async function parseMatch(matchData) {
       algoCheck: false,
     });
 
-    /*
-      Match
-    */
-
-    const match = {
-      date,
-    };
-
-    if (!leagueUnique) {
-      match.leagueId = leagueId;
-    } else {
-      match.leagueId = await leagueService.save();
-    }
-
-    if (!homeTeamUnique) {
-      match.homeTeamId = homeTeamId;
-    } else {
-      match.homeTeamId = await homeTeamService.save();
-    }
-
-    if (!awayTeamUnique) {
-      match.awayTeamId = awayTeamId;
-    } else {
-      match.awayTeamId = await awayTeamService.save();
-    }
-
     if (!gameUnique) {
       match.gameId = gameId;
     } else {
       match.gameId = await gameService.save();
     }
 
-    console.log(gameUnique)
+    /*
+      Match
+    */
 
     const matchService = new MatchService(match);
 
@@ -160,18 +151,15 @@ async function parseMatch(matchData) {
     });
 
     if (similarMatch) {
+      // console.log(await similarMatch.get('homeTeamId'))
+      // console.log(await similarMatch.get('awayTeamId'))
       console.log(`found similar match: ${await similarMatch.get('_id')}`);
     } else {
       const matchId = await matchService.save();
       console.log(`saved new match: ${matchId}`);
     }
-
-    console.log('gameunique:' + gameUnique)
-    console.log(`leagueunique: ${leagueUnique}`)
-    console.log(`hometeamunique: ${homeTeamUnique}`)
-    console.log(`awayteamunique: ${awayTeamUnique}`)
   } catch (error) {
-    console.log(error);
+    console.log(error)
     Raven.captureException(error);
   }
 }
@@ -190,25 +178,40 @@ router.post('/tasks/match', async (ctx, next) => {
           sources: {
             pinnacle = true,
           },
+          opts: {
+            league: {
+              algocheck: leagueAlgo = false,
+            },
+            game: {
+              algocheck: gameAlgo = false,
+            },
+            homeTeam: {
+              algoCheck: homeTeamAlgo = false,
+            },
+            awayTeam: {
+              algocheck: awayTeamAlgo = false,
+            },
+          },
         },
       },
     } = ctx;
 
-    const servicesToCall = [initDbConnection()];
+    const dependencies = [initDbConnection()];
+
+    await Promise.all(dependencies);
+
+    const sourcesToCall = [];
 
     if (pinnacle) {
       const pinnacleService = new PinnacleService();
-      servicesToCall.push(pinnacleService.getMatches());
+      sourcesToCall.push(pinnacleService.getMatches());
     }
 
-    const [db, pinnacleMatches] = await Promise.all(servicesToCall);
-    const matchTasks = [];
+    const [pinnacleMatches] = await Promise.all(sourcesToCall);
 
     for (const match of pinnacleMatches) { // eslint-disable-line
-      matchTasks.push(parseMatch(match));
+      await parseMatch(match); // eslint-disable-line
     }
-
-    await Promise.all(matchTasks);
 
     await next();
   } catch (error) {

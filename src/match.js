@@ -31,8 +31,6 @@ class MatchService {
       id,
     } = await new Match(match).save();
 
-    console.log(id)
-
     return id;
   }
 }

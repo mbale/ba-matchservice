@@ -41,14 +41,17 @@ class Utils {
   /*
     Validate json schema
   */
-  static validateSchema(data, schema) {
+  static validateSchema(schemaname, data, schema) {
     try {
       const {
         error,
       } = Joi.validate(data, schema);
 
       if (error) {
-        throw new InvalidSchemaError(schema, data, error);
+        console.log('hi')
+        console.log(error)
+        console.log(data)
+        throw new InvalidSchemaError(schemaname, data, error);
       }
     } catch (error) {
       throw error;
@@ -68,13 +71,10 @@ class Utils {
     const jaroWinklerValue = jaroWinkler(from, to); // distance
     const levenshteinValue = levenshtein(from, to); // metric distance
     // console.log(`eudex: ${eudexValue}`);
-    console.log(`dice: ${diceValue}`);
-    // console.log(`mra: match: ${mraValue.matching}, value: ${mraValue.similarity}`);
-    // console.log(`jarowWinkler: ${jaroWinklerValue}`);
-    // console.log(`levenshtein: ${levenshteinValue}`);
+    console.log(`similarity: ${diceValue}`);
+    console.log(`distance: ${levenshteinValue}`);
     return {
       dice: diceValue,
-      //mra: mraValue,
       jaroWinkler: jaroWinklerValue,
       levenshtein: levenshteinValue,
     };

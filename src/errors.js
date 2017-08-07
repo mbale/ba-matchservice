@@ -12,10 +12,10 @@ class AppError extends Error {
 }
 
 class InvalidSchemaError extends Error {
-  constructor(schema, data, error) {
-    super(`${schema} schema validation failed with error: ${error}`);
+  constructor(schemaname, data, error) {
+    super(`schema: ${schemaname} validation failed with error: ${error}`);
 
-    this.schema = schema;
+    this.schema = schemaname;
     this.data = data;
     this.error = error;
   }
