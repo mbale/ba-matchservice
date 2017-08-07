@@ -84,6 +84,8 @@ class GameService {
 
       const strictlyEquals = gamenameInDb.toLowerCase() === gamenameLowercase;
 
+      console.log(strictlyEquals)
+
       // strictly equal
       if (strictlyEquals) {
         relatedGames.push(Utils.similarityType('strict', gamenameInDb, {

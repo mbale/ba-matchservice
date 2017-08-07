@@ -5,6 +5,9 @@ import {
 import timestamps from 'mongorito-timestamps';
 import Raven from 'raven';
 import Joi from 'joi';
+import Koa from 'koa';
+import Router from 'koa-router';
+import bodyParser from 'koa-bodyparser';
 import Utils from './utils.js';
 import PinnacleService from './sources/pinnacle.js';
 import MatchService from './match.js';
@@ -144,6 +147,8 @@ async function parseMatch(matchData) {
       match.gameId = await gameService.save();
     }
 
+    console.log(gameUnique)
+
     const matchService = new MatchService(match);
 
     // check if we have the same match in db
@@ -171,38 +176,47 @@ async function parseMatch(matchData) {
   }
 }
 
-/*
-  Entry
- */
-async function main() {
-  /*
-    Bootstrap core dependencies
-   */
+const app = new Koa();
+const router = new Router({
+  prefix: '/api',
+});
+
+
+router.post('/tasks/match', async (ctx, next) => {
   try {
-    const pinnacleService = new PinnacleService();
+    const {
+      request: {
+        body: {
+          sources: {
+            pinnacle = true,
+          },
+        },
+      },
+    } = ctx;
 
-    console.log('hi')
-    const [
-      db,
-      pinnacleMatches,
-    ] = await Promise.all([
-      initDbConnection(),
-      pinnacleService.getMatches(),
-    ]);
+    const servicesToCall = [initDbConnection()];
 
+    if (pinnacle) {
+      const pinnacleService = new PinnacleService();
+      servicesToCall.push(pinnacleService.getMatches());
+    }
+
+    const [db, pinnacleMatches] = await Promise.all(servicesToCall);
     const matchTasks = [];
 
-    for (const match of pinnacleMatches) {
+    for (const match of pinnacleMatches) { // eslint-disable-line
       matchTasks.push(parseMatch(match));
     }
 
-    console.log('hi')
-
     await Promise.all(matchTasks);
 
+    await next();
   } catch (error) {
-    console.log(error.message);
+    throw ctx.throw(500, '', error);
   }
-}
+});
 
-main();
+app.use(bodyParser());
+app.use(router.routes());
+
+app.listen(process.env.PORT);
