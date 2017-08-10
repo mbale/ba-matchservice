@@ -35,4 +35,4 @@ class MatchService {
   }
 }
 
-export default MatchService;
+export default Match;

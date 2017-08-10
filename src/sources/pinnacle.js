@@ -3,8 +3,66 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-class PinnacleService {
-  async getMatches() {
+class PinnacleSource {
+  // pinnacle has differentation in gamename in terms of how it will be streamed (live) or not
+  // we do not
+  static findAndRemoveKeywords(gamename) {
+    // pinnacle related keywords
+    // only pass here lowercase keywords
+    const keywords = ['live'];
+    let game = gamename.trim();
+    // we convert to find keywords
+    const gameLowercase = gamename.toLowerCase();
+
+    keywords.forEach((keyword) => {
+      // we check if keyword is in string
+      if (gameLowercase.includes(keyword)) {
+        // get first index of the keywords
+        const keywordStartIndex = gameLowercase.indexOf(keyword, 0);
+        // check where it ends
+        const keywordEndIndex = keywordStartIndex + keyword.length;
+        // cut out rest
+        game = game.substring(keywordEndIndex, gameLowercase.length).trim();
+      }
+    });
+
+    return game;
+  }
+
+  // pinnacle stores gametype and leaguetype together in leaguename
+  static splitNameIntoLeagueAndGame(leaguename) {
+    let league = leaguename;
+    let game = null;
+
+    // split by '-' separator to 2 part
+    const namesInArray = league.split('-', 2);
+    // trim whitespace and set league name
+    league = namesInArray[1].trim();
+    game = namesInArray[0].trim();
+
+    return {
+      league,
+      game,
+    };
+  }
+
+  // often pinnacle stores in teamname the objective type of match (1st kills) etc
+  static removeMapSegmentFromTeam(teamname, segment) {
+    let team = teamname;
+
+    // we find first occurance of segment
+    const startOfSegment = team.indexOf(segment);
+
+    // we found segment
+    if (startOfSegment !== -1) {
+      // cut out the original team name name
+      team = team.substring(0, startOfSegment).trim();
+    }
+
+    return team;
+  }
+
+  static async getMatches(since, opts = {}) {
     const {
       data: {
         leagues,
@@ -18,8 +76,8 @@ class PinnacleService {
       },
     });
 
-    this.leagues = leagues;
-    this.matches = [];
+    let lastFetchTime = null;
+    const matches = [];
     const leagueIds = [];
 
     /* eslint-disable no-await-in-loop, no-restricted-syntax */
@@ -27,62 +85,15 @@ class PinnacleService {
       if (league.eventCount > 0) {
         leagueIds.push(league.id);
       }
+    }
 
-      // we've match / league to save
-      // pinnacle has got a technical issue when we request matches from empty league,
-      // so we only can be sure such way we do not get into various of problems
-      // if (eventCount > 0) {
-      //   const {
-      //     data,
-      //   } = await axios.get(process.env.PINNACLE_GET_MATCHES_URL, {
-      //     params: {
-      //       sportId: process.env.PINNACLE_SPORTID,
-      //       leagueIds: leagueId,
-      //     },
-      //     headers: {
-      //       Authorization: `Basic ${process.env.PINNACLE_API_KEY}`,
-      //     },
-      //   });
-      //   // get matches
-      //   let {
-      //     league: matchesOfLeague,
-      //   } = data;
+    const matchParams = {
+      sportId: process.env.PINNACLE_SPORTID,
+      leagueIds,
+    };
 
-      //   // because of terrible schema of pinnacle that's why
-      //   // we get all match for corresponding league
-      //   matchesOfLeague = matchesOfLeague[0].events;
-
-      //   for (const match of matchesOfLeague) {
-      //     // restruct match objects
-      //     const {
-      //       starts: date,
-      //     } = match;
-
-      //     let {
-      //       home: homeTeam,
-      //       away: awayTeam,
-      //     } = match;
-
-      //     const firstBracketHomeTeam = homeTeam.indexOf('(');
-      //     const firstBracketAwayTeam = awayTeam.indexOf('(');
-
-      //     if (firstBracketHomeTeam !== -1) {
-      //       homeTeam = homeTeam.substring(0, firstBracketHomeTeam);
-      //     }
-
-      //     if (firstBracketAwayTeam !== -1) {
-      //       awayTeam = awayTeam.substring(0, firstBracketAwayTeam);
-      //     }
-
-      //     this.matches.push({
-      //       homeTeam,
-      //       awayTeam,
-      //       league: leaguename,
-      //       game: gamename,
-      //       date,
-      //     });
-      //   }
-      // }
+    if (since) {
+      matchParams.since = since;
     }
 
     const {
@@ -91,31 +102,33 @@ class PinnacleService {
         league: leaguesWithMatches,
       },
     } = await axios.get(process.env.PINNACLE_GET_MATCHES_URL, {
-      params: {
-        sportId: process.env.PINNACLE_SPORTID,
-        leagueIds,
-      },
+      params: matchParams,
       headers: {
         Authorization: `Basic ${process.env.PINNACLE_API_KEY}`,
       },
     });
+
+    // assign last time
+    lastFetchTime = last;
 
     for (const leagueWithMatch of leaguesWithMatches) { // eslint-disable-line
       let {
         name: leaguename,
       } = leagueWithMatch;
 
-      let gamename = '';
+      let gamename = null;
 
-      // get gameType
-      // TODO find gametype
       if (leaguename.indexOf('-') !== -1) {
-        // split by '-' separator
-        const namesInArray = leaguename.split('-', 2);
-        // trim whitespace and set league name
-        leaguename = namesInArray[1].trim();
-        gamename = namesInArray[0].trim();
+        const {
+          league,
+          game,
+        } = PinnacleSource.splitNameIntoLeagueAndGame(leaguename);
+        leaguename = league;
+        gamename = game;
       }
+
+      gamename = PinnacleSource.findAndRemoveKeywords(gamename);
+
 
       leagueWithMatch.events.forEach((match) => {
         const {
@@ -127,18 +140,11 @@ class PinnacleService {
           away: awayTeam,
         } = match;
 
-        const firstBracketHomeTeam = homeTeam.indexOf('(');
-        const firstBracketAwayTeam = awayTeam.indexOf('(');
+        // we find (map) segment
+        homeTeam = PinnacleSource.removeMapSegmentFromTeam(homeTeam, '(');
+        awayTeam = PinnacleSource.removeMapSegmentFromTeam(awayTeam, '(');
 
-        if (firstBracketHomeTeam !== -1) {
-          homeTeam = homeTeam.substring(0, firstBracketHomeTeam);
-        }
-
-        if (firstBracketAwayTeam !== -1) {
-          awayTeam = awayTeam.substring(0, firstBracketAwayTeam);
-        }
-
-        this.matches.push({
+        matches.push({
           homeTeam,
           awayTeam,
           league: leaguename,
@@ -147,8 +153,11 @@ class PinnacleService {
         });
       });
     }
-    return this.matches;
+    return {
+      matches,
+      lastFetchTime,
+    };
   }
 }
 
-export default PinnacleService;
+export default PinnacleSource;

@@ -1,60 +1,23 @@
 import {
-  Model,
   ObjectId,
 } from 'mongorito';
-import Utils from './utils.js';
+import Utils from '../utils.js';
 
+class GameComparator {
+  static async findSimilar(game, gameCollection, opts = {}) {
+    const games = gameCollection;
+    const gamenameToCheck = game;
 
-class Game extends Model {
-  static collection() {
-    return 'games';
-  }
-}
+    let state = null;
 
-class GameService {
-  constructor(game) {
-    this.game = game.trim();
-    this.games = null;
-  }
-
-  static get model() {
-    return Game;
-  }
-
-  async init() {
-    this.games = await Game.find();
-  }
-
-  async save() {
-    const name = this.game;
-
-    const {
-      id,
-    } = await new Game({
-      name,
-    }).save();
-
-    return id;
-  }
-
-  setState(unique = true, id = false) {
-    this.state = {
-      unique,
-      id,
-    };
-  }
-
-  async similarityCheck(opts = {}) {
-    await this.init();
-    const games = this.games;
-    const gamenameToCheck = this.game;
     const gamenameLowercase = gamenameToCheck.toLowerCase();
+
     const {
-      algoCheck = true,
+      algoCheck = false,
     } = opts;
 
     if (games.length === 0) {
-      this.setState();
+      state = Utils.state();
     } else {
       const relatedGames = [];
 
@@ -92,7 +55,7 @@ class GameService {
       }
 
       if (relatedGames.length === 0) {
-        this.setState();
+        state = Utils.state();
       } else {
         const isMatchByStrict = relatedGames.find(relatedGame => relatedGame.type === 'strict');
 
@@ -104,7 +67,7 @@ class GameService {
             },
           } = isMatchByStrict;
 
-          this.setState(false, id);
+          state = Utils.state(false, id);
         } else {
           const sortBySimiliarity = relatedGames.sort((a, b) =>
             (a.data.similarity - b.data.similarity));
@@ -113,12 +76,12 @@ class GameService {
             id,
           } = sortBySimiliarity[sortBySimiliarity.length - 1];
 
-          this.setState(false, id);
+          Utils.state(false, id);
         }
       }
     }
-    return this.state;
+    return state;
   }
 }
 
-export default GameService;
+export default GameComparator;

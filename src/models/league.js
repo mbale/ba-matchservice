@@ -2,7 +2,7 @@ import {
   Model,
   ObjectId,
 } from 'mongorito';
-import Utils from './utils.js';
+import Utils from '../utils.js';
 
 class League extends Model {
   static collection() {
@@ -118,4 +118,4 @@ class LeagueService {
   }
 }
 
-export default LeagueService;
+export default League;
