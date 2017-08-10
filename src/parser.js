@@ -12,7 +12,7 @@ async function parser(matchData) {
       homeTeam,
       awayTeam,
       league,
-      game,
+      game: gamename,
     } = matchData;
 
     let {
@@ -86,12 +86,16 @@ async function parser(matchData) {
     const {
       unique: gameUnique,
       id: gameId,
-    } = await GameComparator.findSimilar(game, gameCollection);
+    } = await GameComparator.findSimilar(gamename, gameCollection);
 
     if (!gameUnique) {
-      //console.log(gameId)
+      console.log(gameId)
     } else {
-      //console.log(gameUnique)
+      const game = new Game({
+        name: gamename,
+      });
+
+      await game.save();
     }
 
     // /*

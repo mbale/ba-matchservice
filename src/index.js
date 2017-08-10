@@ -5,16 +5,9 @@ import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
 import initDbConnection from './db.js';
+import Transaction from './models/transaction.js';
 import PinnacleSource from './sources/pinnacle.js';
 import parser from './parser.js';
-
-const schema = Joi.object().keys({
-  homeTeam: Joi.string().required(),
-  awayTeam: Joi.string().required(),
-  league: Joi.string().required(),
-  game: Joi.string().required(),
-  date: Joi.string().isoDate().required(),
-});
 
 dotenv.config();
 
@@ -32,7 +25,7 @@ router.post('/tasks/match', async (ctx, next) => {
       request: {
         body: {
           sources = {},
-          algoChecK = {},
+          opts = {},
         },
       },
     } = ctx;
@@ -41,7 +34,6 @@ router.post('/tasks/match', async (ctx, next) => {
       pinnacle = false,
     } = sources;
 
-
     const coreDependencies = [
       initDbConnection(),
     ];
@@ -49,6 +41,15 @@ router.post('/tasks/match', async (ctx, next) => {
     await Promise.all(coreDependencies);
 
     const sourceDependencies = [];
+
+    const transaction = new Transaction({
+      type: 'match',
+      matchSources: sources,
+      opts,
+      result: {},
+    });
+
+    await transaction.save();
 
     if (pinnacle) {
       sourceDependencies.push(PinnacleSource.getMatches());
@@ -63,6 +64,7 @@ router.post('/tasks/match', async (ctx, next) => {
       await parser(match); // eslint-disable-line
     }
 
+    await transaction.setSate('done');
     await next();
   } catch (error) {
     throw ctx.throw(500, '', error);

@@ -3,6 +3,7 @@ import {
   Database,
 } from 'mongorito';
 import timestamps from 'mongorito-timestamps';
+import Transaction from './models/transaction.js';
 import Match from './models/match.js';
 import League from './models/league.js';
 import Team from './models/team.js';
@@ -16,14 +17,16 @@ async function initDbConnection() {
   await db.connect();
 
   // plugin
-  db.use(timestamps());
+  db.use(timestamps({
+    createdAt: '_createdAt',
+    updatedAt: '_updatedAt',
+  }));
   // registering model
+  db.register(Transaction);
   db.register(Game);
   db.register(Match);
   db.register(Team);
   db.register(League);
-
-  console.log('reg')
 
   return db;
 }
