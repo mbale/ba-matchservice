@@ -1,17 +1,17 @@
-import Raven from 'raven';
-// import MatchService from './comparators/match.js';
-// import LeagueService from './comparators/league.js';
-// import TeamService from './comparators/team.js';
+import Match from './models/match.js';
 import Game from './models/game.js';
+import League from './models/league.js';
+import Team from './models/team.js';
+import LeagueComparator from './comparators/league.js';
 import GameComparator from './comparators/game.js';
+import TeamComparator from './comparators/team.js';
 
 async function parser(matchData) {
   try {
-    //console.log(matchData);
     const {
-      homeTeam,
-      awayTeam,
-      league,
+      homeTeam: homeTeamname,
+      awayTeam: awayTeamname,
+      league: leaguename,
       game: gamename,
     } = matchData;
 
@@ -25,104 +25,104 @@ async function parser(matchData) {
       date,
     };
 
-    /*
-      League
-    */
+    const [
+      gameCollection,
+      leagueCollection,
+      teamCollection,
+    ] = await Promise.all([
+      Game.find(),
+      League.find(),
+      Team.find(),
+    ]);
 
-    // const leagueService = new LeagueService(league);
-
-    // const {
-    //   unique: leagueUnique,
-    //   id: leagueId,
-    // } = await leagueService.similarityCheck({
-    //   algoCheck: false,
-    // });
-
-    // if (!leagueUnique) {
-    //   match.leagueId = leagueId;
-    // } else {
-    //   match.leagueId = await leagueService.save();
-    // }
-
-    // /*
-    //   Team
-    // */
-
-    // const homeTeamService = new TeamService(homeTeam);
-    // const awayTeamService = new TeamService(awayTeam);
-
-    // const {
-    //   unique: homeTeamUnique,
-    //   id: homeTeamId,
-    // } = await homeTeamService.similarityCheck({
-    //   algoCheck: false,
-    // });
-
-    // if (!homeTeamUnique) {
-    //   match.homeTeamId = homeTeamId;
-    // } else {
-    //   match.homeTeamId = await homeTeamService.save();
-    // }
-
-    // const {
-    //   unique: awayTeamUnique,
-    //   id: awayTeamId,
-    // } = await awayTeamService.similarityCheck({
-    //   algoCheck: false,
-    // });
-
-    // if (!awayTeamUnique) {
-    //   match.awayTeamId = awayTeamId;
-    // } else {
-    //   match.awayTeamId = await awayTeamService.save();
-    // }
-
-    /*
-      Game
-    */
-
-    const gameCollection = await Game.find();
-
-    const {
+    const [{
       unique: gameUnique,
       id: gameId,
-    } = await GameComparator.findSimilar(gamename, gameCollection);
+    }, {
+      unique: leagueUnique,
+      id: leagueId,
+    }, {
+      unique: homeTeamUnique,
+      id: homeTeamId,
+    }, {
+      unique: awayTeamUnique,
+      id: awayTeamId,
+    }] = await Promise.all([
+      GameComparator.findSimilar(gamename, gameCollection),
+      LeagueComparator.findSimilar(leaguename, leagueCollection),
+      TeamComparator.findSimilar(homeTeamname, teamCollection),
+      TeamComparator.findSimilar(awayTeamname, teamCollection),
+    ]);
 
-    if (!gameUnique) {
-      console.log(gameId)
-    } else {
+    /*
+      Saving unique entities
+    */
+
+    if (gameUnique) {
       const game = new Game({
         name: gamename,
       });
-
-      await game.save();
+      const {
+        id,
+      } = await game.save();
+      match.gameId = id;
+    } else {
+      match.gameId = gameId;
     }
 
-    // /*
-    //   Match
-    // */
+    if (leagueUnique) {
+      const league = new League({
+        name: leaguename,
+      });
+      const {
+        id,
+      } = await league.save();
+      match.leagueId = id;
+    } else {
+      match.leagueId = leagueId;
+    }
 
-    // const matchService = new MatchService(match);
+    if (homeTeamUnique) {
+      const homeTeam = new Team({
+        name: homeTeamname,
+      });
+      const {
+        id,
+      } = await homeTeam.save();
+      match.homeTeamId = id;
+    } else {
+      match.homeTeamId = homeTeamId;
+    }
 
-    // // check if we have the same match in db
+    if (awayTeamUnique) {
+      const awayTeam = new Team({
+        name: awayTeamname,
+      });
+      const {
+        id,
+      } = await awayTeam.save();
+      match.awayTeamId = id;
+    } else {
+      match.awayTeamId = awayTeamId;
+    }
 
-    // const similarMatch = await MatchService.model.findOne({
-    //   homeTeamId: match.homeTeamId,
-    //   awayTeamId: match.awayTeamId,
-    //   date,
-    // });
+    /*
+      Comparing match
+    */
 
-    // if (similarMatch) {
-    //   // console.log(await similarMatch.get('homeTeamId'))
-    //   // console.log(await similarMatch.get('awayTeamId'))
-    //   console.log(`found similar match: ${await similarMatch.get('_id')}`);
-    // } else {
-    //   const matchId = await matchService.save();
-    //   console.log(`saved new match: ${matchId}`);
-    // }
+    const similarMatch = await Match.findOne(match);
+
+    if (similarMatch) {
+      console.log(`found similar match: ${await similarMatch.get('_id')}`);
+    } else {
+      const uniqueMatch = new Match(match);
+      const {
+        id: matchId,
+      } = await uniqueMatch.save();
+      console.log(`saved new match: ${matchId}`);
+    }
   } catch (error) {
     console.log(error)
-    //Raven.captureException(error);
   }
 }
 

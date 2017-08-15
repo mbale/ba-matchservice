@@ -4,29 +4,29 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 class PinnacleSource {
-  // pinnacle has differentation in gamename in terms of how it will be streamed (live) or not
-  // we do not
-  static findAndRemoveKeywords(gamename) {
+  // pinnacle has differentations sometimes in entity names
+  // we remove that
+  static findAndRemoveKeywords(entityToCheck) {
     // pinnacle related keywords
     // only pass here lowercase keywords
-    const keywords = ['live'];
-    let game = gamename.trim();
+    const keywords = ['live', 'esports'];
+    let entity = entityToCheck.trim();
     // we convert to find keywords
-    const gameLowercase = gamename.toLowerCase();
+    const entityLowerCase = entity.toLowerCase();
 
     keywords.forEach((keyword) => {
       // we check if keyword is in string
-      if (gameLowercase.includes(keyword)) {
+      if (entityLowerCase.includes(keyword)) {
         // get first index of the keywords
-        const keywordStartIndex = gameLowercase.indexOf(keyword, 0);
+        const keywordStartIndex = entityLowerCase.indexOf(keyword, 0);
         // check where it ends
         const keywordEndIndex = keywordStartIndex + keyword.length;
         // cut out rest
-        game = game.substring(keywordEndIndex, gameLowercase.length).trim();
+        entity = entity.substring(keywordEndIndex, entityLowerCase.length).trim();
       }
     });
 
-    return game;
+    return entity;
   }
 
   // pinnacle stores gametype and leaguetype together in leaguename
@@ -129,7 +129,6 @@ class PinnacleSource {
 
       gamename = PinnacleSource.findAndRemoveKeywords(gamename);
 
-
       leagueWithMatch.events.forEach((match) => {
         const {
           starts: date,
@@ -143,6 +142,9 @@ class PinnacleSource {
         // we find (map) segment
         homeTeam = PinnacleSource.removeMapSegmentFromTeam(homeTeam, '(');
         awayTeam = PinnacleSource.removeMapSegmentFromTeam(awayTeam, '(');
+
+        homeTeam = PinnacleSource.findAndRemoveKeywords(homeTeam);
+        awayTeam = PinnacleSource.findAndRemoveKeywords(awayTeam);
 
         matches.push({
           homeTeam,

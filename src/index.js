@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 import Raven from 'raven';
-import Joi from 'joi';
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
@@ -11,7 +10,7 @@ import parser from './parser.js';
 
 dotenv.config();
 
-//Raven.config(process.env.SENTRY_DSN).install();
+Raven.config(process.env.SENTRY_DSN).install();
 
 const app = new Koa();
 const router = new Router({
@@ -67,6 +66,7 @@ router.post('/tasks/match', async (ctx, next) => {
     await transaction.setSate('done');
     await next();
   } catch (error) {
+    Raven.captureException(error);
     throw ctx.throw(500, '', error);
   }
 });

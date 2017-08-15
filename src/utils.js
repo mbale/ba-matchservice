@@ -60,9 +60,6 @@ class Utils {
       } = Joi.validate(data, schema);
 
       if (error) {
-        console.log('hi')
-        console.log(error)
-        console.log(data)
         throw new InvalidSchemaError(schemaname, data, error);
       }
     } catch (error) {
