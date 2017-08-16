@@ -1,13 +1,13 @@
 FROM node:latest
 
 # Create app directory
-WORKDIR /app
-COPY package.json /app
+WORKDIR /match
+COPY package.json /match
 RUN npm install
-COPY . /app
+COPY . /match
 
-ENV NODE_ENV=production
-ENV PORT=3000
+ENV NODE_ENV=development
+ENV PORT=4000
 
 CMD npm run build && npm start
-EXPOSE 3000
+EXPOSE 4000
