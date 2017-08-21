@@ -5,6 +5,7 @@ import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
 import initDbConnection from './db.js';
 import Transaction from './models/transaction.js';
+import Source from './models/pinnacle.js';
 import PinnacleSource from './sources/pinnacle.js';
 import parser from './parser.js';
 
@@ -50,8 +51,31 @@ router.post('/tasks/match', async (ctx, next) => {
 
     await transaction.save();
 
+    let lastPinnacleEntry = null;
+
     if (pinnacle) {
-      sourceDependencies.push(PinnacleSource.getMatches());
+      const pinnacleData = await Source
+        .sort('-_createdAt')
+        .find({
+          type: 'pinnacle',
+        });
+
+      if (pinnacleData.length > 0) {
+        const {
+          lastFetchTime,
+        } = await pinnacleData[pinnacleData.length - 1].get();
+        lastPinnacleEntry = lastFetchTime;
+      }
+    }
+
+    // get all source
+    for (const source in sources) {
+      switch (source) {
+      case 'pinnacle':
+        sourceDependencies.push(PinnacleSource.getMatches(lastPinnacleEntry));
+        // falls through
+      default:
+      }
     }
 
     const [{
@@ -59,11 +83,26 @@ router.post('/tasks/match', async (ctx, next) => {
       lastFetchTime: lastPinnacleFetch,
     }] = await Promise.all(sourceDependencies);
 
-    for (const match of pinnacleMatches) { // eslint-disable-line
-      await parser(match); // eslint-disable-line
+    for (const match of pinnacleMatches) {
+      await parser(match);
+    }
+
+    if (lastPinnacleFetch) {
+      // it's null if there was no new data since
+      const pinnacleData = new Source({
+        type: 'pinnacle',
+        lastFetchTime: lastPinnacleFetch,
+      });
+
+      await pinnacleData.save();
     }
 
     await transaction.setSate('done');
+
+    ctx.body = {
+      success: true,
+      details: await transaction.get(),
+    };
     await next();
   } catch (error) {
     Raven.captureException(error);

@@ -97,10 +97,7 @@ class PinnacleSource {
     }
 
     const {
-      data: {
-        last,
-        league: leaguesWithMatches,
-      },
+      data,
     } = await axios.get(process.env.PINNACLE_GET_MATCHES_URL, {
       params: matchParams,
       headers: {
@@ -108,53 +105,63 @@ class PinnacleSource {
       },
     });
 
-    // assign last time
-    lastFetchTime = last;
+    // pinnacle sends empty string in response if there is no content since
+    // yupp with json header
+    if (data !== '') {
+      const {
+        last,
+        league: leaguesWithMatches,
+      } = data;
 
-    for (const leagueWithMatch of leaguesWithMatches) { // eslint-disable-line
-      let {
-        name: leaguename,
-      } = leagueWithMatch;
+      // assign last time
+      lastFetchTime = last;
 
-      let gamename = null;
-
-      if (leaguename.indexOf('-') !== -1) {
-        const {
-          league,
-          game,
-        } = PinnacleSource.splitNameIntoLeagueAndGame(leaguename);
-        leaguename = league;
-        gamename = game;
-      }
-
-      gamename = PinnacleSource.findAndRemoveKeywords(gamename);
-
-      leagueWithMatch.events.forEach((match) => {
-        const {
-          starts: date,
-        } = match;
-
+      for (const leagueWithMatch of leaguesWithMatches) { // eslint-disable-line
         let {
-          home: homeTeam,
-          away: awayTeam,
-        } = match;
+          name: leaguename,
+        } = leagueWithMatch;
 
-        // we find (map) segment
-        homeTeam = PinnacleSource.removeMapSegmentFromTeam(homeTeam, '(');
-        awayTeam = PinnacleSource.removeMapSegmentFromTeam(awayTeam, '(');
+        let gamename = null;
 
-        homeTeam = PinnacleSource.findAndRemoveKeywords(homeTeam);
-        awayTeam = PinnacleSource.findAndRemoveKeywords(awayTeam);
+        if (leaguename.indexOf('-') !== -1) {
+          const {
+            league,
+            game,
+          } = PinnacleSource.splitNameIntoLeagueAndGame(leaguename);
+          leaguename = league;
+          gamename = game;
+        }
 
-        matches.push({
-          homeTeam,
-          awayTeam,
-          league: leaguename,
-          game: gamename,
-          date,
+        gamename = PinnacleSource.findAndRemoveKeywords(gamename);
+
+        leagueWithMatch.events.forEach((match) => {
+          const {
+            starts: date,
+          } = match;
+
+          let {
+            home: homeTeam,
+            away: awayTeam,
+          } = match;
+
+          // we find (map) segment
+          homeTeam = PinnacleSource.removeMapSegmentFromTeam(homeTeam, '(');
+          awayTeam = PinnacleSource.removeMapSegmentFromTeam(awayTeam, '(');
+
+          homeTeam = PinnacleSource.findAndRemoveKeywords(homeTeam);
+          awayTeam = PinnacleSource.findAndRemoveKeywords(awayTeam);
+
+          matches.push({
+            homeTeam,
+            awayTeam,
+            league: leaguename,
+            game: gamename,
+            date,
+          });
         });
-      });
+      }
     }
+
     return {
       matches,
       lastFetchTime,
