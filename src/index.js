@@ -13,11 +13,43 @@ dotenv.config();
 
 Raven.config(process.env.SENTRY_DSN).install();
 
+async function getLastRequest(source) {
+  const requests = await Source
+    .sort('-_createdAt')
+    .find({
+      type: source,
+    });
+
+  let lastRequest = null;
+
+  if (requests.length > 0) {
+    const {
+      lastFetchTime,
+    } = await requests[requests.length - 1].get();
+    lastRequest = lastFetchTime;
+  }
+
+  return {
+    type: source,
+    lastRequest,
+  };
+}
+
+async function startTransaction(sources, opts) {
+  const transaction = new Transaction({
+    type: 'match',
+    sources,
+    opts,
+  });
+
+  await transaction.save();
+  return transaction;
+}
+
 const app = new Koa();
 const router = new Router({
   prefix: '/api',
 });
-
 
 router.post('/tasks/match', async (ctx, next) => {
   try {
@@ -30,73 +62,84 @@ router.post('/tasks/match', async (ctx, next) => {
       },
     } = ctx;
 
-    const {
-      pinnacle = false,
-    } = sources;
-
     const coreDependencies = [
       initDbConnection(),
     ];
 
     await Promise.all(coreDependencies);
+    const transaction = await startTransaction();
+
+    /*
+      Get all information from last requests to cache
+    */
+
+    const cacheDependencies = [];
+
+    for (const source in sources) {
+      cacheDependencies.push(getLastRequest(source));
+    }
+
+    // get cache before all match
+    const caches = await Promise.all(cacheDependencies);
+
+    const lastFetches = {};
+
+    // pair times with source
+    caches.forEach((cache) => {
+      lastFetches[cache.type] = cache.lastRequest;
+    });
+
+    /*
+      Check what kind of source we need data from
+    */
 
     const sourceDependencies = [];
 
-    const transaction = new Transaction({
-      type: 'match',
-      matchSources: sources,
-      opts,
-      result: {},
-    });
-
-    await transaction.save();
-
-    let lastPinnacleEntry = null;
-
-    if (pinnacle) {
-      const pinnacleData = await Source
-        .sort('-_createdAt')
-        .find({
-          type: 'pinnacle',
-        });
-
-      if (pinnacleData.length > 0) {
-        const {
-          lastFetchTime,
-        } = await pinnacleData[pinnacleData.length - 1].get();
-        lastPinnacleEntry = lastFetchTime;
-      }
-    }
-
-    // get all source
-    for (const source in sources) {
+    for (const source of sources) {
       switch (source) {
       case 'pinnacle':
-        sourceDependencies.push(PinnacleSource.getMatches(lastPinnacleEntry));
+        sourceDependencies.push(PinnacleSource.getMatches(lastFetches.pinnacle));
         // falls through
       default:
       }
     }
 
-    const [{
-      matches: pinnacleMatches,
-      lastFetchTime: lastPinnacleFetch,
-    }] = await Promise.all(sourceDependencies);
+    const matchAggregation = await Promise.all(sourceDependencies);
 
-    for (const match of pinnacleMatches) {
+    /*
+      Get information from sources
+    */
+
+    let matches = [];
+
+    for (const aggr of matchAggregation) {
+      // merging all matches
+      matches = matches.concat(aggr.matches);
+    }
+
+    for (const match of matches) {
       await parser(match);
     }
 
-    if (lastPinnacleFetch) {
-      // it's null if there was no new data since
-      const pinnacleData = new Source({
-        type: 'pinnacle',
-        lastFetchTime: lastPinnacleFetch,
-      });
+    /*
+      Save new cache informations
+    */
 
-      await pinnacleData.save();
+    const freshCacheDependencies = [];
+
+    const freshCaches = matchAggregation.map((aggr) => {
+      return {
+        type: aggr.type,
+        lastFetchTime: aggr.lastFetchTime,
+      };
+    });
+
+    for (const cache of freshCaches) {
+      const freshCache = new Source(cache);
+      freshCacheDependencies.push(freshCache.save());
     }
 
+    await Promise.all(freshCacheDependencies);
     await transaction.setSate('done');
 
     ctx.body = {

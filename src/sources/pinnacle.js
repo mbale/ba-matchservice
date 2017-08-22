@@ -163,6 +163,7 @@ class PinnacleSource {
     }
 
     return {
+      type: 'pinnacle',
       matches,
       lastFetchTime,
     };
