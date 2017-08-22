@@ -2902,9 +2902,9 @@ mongorito-timestamps@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/mongorito-timestamps/-/mongorito-timestamps-1.0.0.tgz#f34afb6609c254ae37d479b6b932998af7c6e870"
 
-mongorito@^3.0.1:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/mongorito/-/mongorito-3.0.1.tgz#65a07bb7445552d9a805e47bad916af672bd9dab"
+mongorito@^3.0.4:
+  version "3.0.4"
+  resolved "https://registry.yarnpkg.com/mongorito/-/mongorito-3.0.4.tgz#c5b4af198b05a5c2ff99b3bffbad6729fc81f637"
   dependencies:
     arrify "^1.0.1"
     dot-prop "^4.0.0"

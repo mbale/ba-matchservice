@@ -39,18 +39,6 @@ class Utils {
   }
 
   /*
-    Comparators use it to set up information for each entity in terms of uniqueness in db
-  */
-  static state(unique = true, id = false) {
-    const state = {
-      unique,
-      id,
-    };
-
-    return state;
-  }
-
-  /*
     Validate json schema
   */
   static validateSchema(schemaname, data, schema) {

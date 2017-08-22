@@ -1,87 +1,68 @@
-import {
-  ObjectId,
-} from 'mongorito';
 import Utils from '../utils.js';
 
 class TeamComparator {
-  static async findSimilar(team, teamCollection, opts = {}) {
-    const teamnameToCheck = team;
+  static async findSimilar(teamname, teamCollection, opts = {}) {
+    const teamnameLowercase = teamname.toLowerCase();
     const teams = teamCollection;
 
-    let state = null;
-
-    const teamnameLowercase = teamnameToCheck.toLowerCase();
+    let teamEntity = null;
 
     const {
       algoCheck = false,
     } = opts;
 
-    if (teams.length === 0) {
-      state = Utils.state();
-    } else {
+    if (teams.length > 0) {
       const relatedTeams = [];
 
       // we check similarity with every entity in db
-      for (const team of teams) { // eslint-disable-line
-        const {
-          _id: teamIdInDb,
-          name: teamnameInDb,
-        } = await team.get(); // eslint-disable-line
+      for (const team of teams) {
+        const teamnameInDb = await team.get('name');
 
         const strictlyEquals = teamnameInDb.toLowerCase() === teamnameLowercase;
 
         // strictly equal
         if (strictlyEquals) {
-          relatedTeams.push(Utils.similarityType('strict', teamnameInDb, {
-            id: new ObjectId(teamIdInDb),
-          }));
+          relatedTeams.push(Utils.similarityType('strict', team));
         }
 
         if (algoCheck && !strictlyEquals) {
           const {
             dice: diceValue, // int
             levenshtein: levenshteinValue,
-          } = Utils.similarityCalculation(teamnameInDb, teamnameToCheck);
+          } = Utils.similarityCalculation(teamnameInDb, teamname);
 
-          if (diceValue >= 0.6) {
-            // similar but char differences are between ]0,2] equal by length
-            relatedTeams.push(Utils.similarityType('algo', teamnameInDb, {
+          if (diceValue >= 0.6 && levenshteinValue <= 3) {
+            // similar with char differences
+            relatedTeams.push(Utils.similarityType('algo', team, {
               similarity: diceValue,
               distance: levenshteinValue,
-              id: new ObjectId(teamIdInDb),
             }));
           }
         }
       }
 
-      if (relatedTeams.length === 0) {
-        state = Utils.state();
-      } else {
+      if (relatedTeams.length > 0) {
         const isMatchByStrict = relatedTeams.find(relatedTeam => relatedTeam.type === 'strict');
 
         if (isMatchByStrict) {
           const {
-            data: {
-              id,
-            },
+            entity,
           } = isMatchByStrict;
 
-          state = Utils.state(false, id);
+          teamEntity = entity;
         } else {
           const sortBySimiliarity = relatedTeams.sort((a, b) =>
             (a.data.similarity - b.data.similarity));
 
           const {
-            data: {
-              id,
-            },
+            entity,
           } = sortBySimiliarity[sortBySimiliarity.length - 1];
 
-          state = Utils.state(false, id);
+          teamEntity = entity;
         }
       }
     }
-    return state;
+    return teamEntity;
   }
 }
 

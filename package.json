@@ -17,7 +17,7 @@
     "koa": "^2.3.0",
     "koa-bodyparser": "^4.2.0",
     "koa-router": "^7.2.1",
-    "mongorito": "^3.0.1",
+    "mongorito": "^3.0.4",
     "mongorito-timestamps": "^1.0.0",
     "raven": "^2.1.1",
     "talisman": "^0.19.0"

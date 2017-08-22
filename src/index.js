@@ -5,7 +5,7 @@ import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
 import initDbConnection from './db.js';
 import Transaction from './models/transaction.js';
-import Source from './models/pinnacle.js';
+import Source from './models/source.js';
 import PinnacleSource from './sources/pinnacle.js';
 import parser from './parser.js';
 
@@ -31,7 +31,7 @@ async function getLastRequest(source) {
 
   return {
     type: source,
-    lastRequest,
+    lastFetchTime: lastRequest,
   };
 }
 
@@ -56,7 +56,7 @@ router.post('/tasks/match', async (ctx, next) => {
     const {
       request: {
         body: {
-          sources = {},
+          sources = [],
           opts = {},
         },
       },
@@ -75,9 +75,9 @@ router.post('/tasks/match', async (ctx, next) => {
 
     const cacheDependencies = [];
 
-    for (const source in sources) {
+    sources.forEach((source) => {
       cacheDependencies.push(getLastRequest(source));
-    }
+    });
 
     // get cache before all match
     const caches = await Promise.all(cacheDependencies);
@@ -86,7 +86,7 @@ router.post('/tasks/match', async (ctx, next) => {
 
     // pair times with source
     caches.forEach((cache) => {
-      lastFetches[cache.type] = cache.lastRequest;
+      lastFetches[cache.type] = cache.lastFetchTime;
     });
 
     /*
@@ -135,6 +135,8 @@ router.post('/tasks/match', async (ctx, next) => {
     });
 
     for (const cache of freshCaches) {
+      // https://github.com/vadimdemedes/mongorito/issues/175
+      // we can't pass null as value
       const freshCache = new Source(cache);
       freshCacheDependencies.push(freshCache.save());
     }

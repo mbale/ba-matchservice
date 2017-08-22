@@ -1,3 +1,6 @@
+import {
+  ObjectId,
+} from 'mongorito';
 import Match from './models/match.js';
 import Game from './models/game.js';
 import League from './models/league.js';
@@ -21,10 +24,6 @@ async function parser(matchData) {
 
     date = new Date(date);
 
-    const match = {
-      date,
-    };
-
     const [
       gameCollection,
       leagueCollection,
@@ -35,19 +34,13 @@ async function parser(matchData) {
       Team.find(),
     ]);
 
-    const [{
-      unique: gameUnique,
-      id: gameId,
-    }, {
-      unique: leagueUnique,
-      id: leagueId,
-    }, {
-      unique: homeTeamUnique,
-      id: homeTeamId,
-    }, {
-      unique: awayTeamUnique,
-      id: awayTeamId,
-    }] = await Promise.all([
+
+    let [
+      game,
+      league,
+      homeTeam,
+      awayTeam,
+    ] = await Promise.all([
       GameComparator.findSimilar(gamename, gameCollection),
       LeagueComparator.findSimilar(leaguename, leagueCollection),
       TeamComparator.findSimilar(homeTeamname, teamCollection),
@@ -58,71 +51,87 @@ async function parser(matchData) {
       Saving unique entities
     */
 
-    if (gameUnique) {
-      const game = new Game({
+    const entitiesToSave = [];
+
+    if (!game) {
+      game = new Game({
         name: gamename,
       });
-      const {
-        id,
-      } = await game.save();
-      match.gameId = id;
-    } else {
-      match.gameId = gameId;
+      entitiesToSave.push(game.save());
     }
 
-    if (leagueUnique) {
-      const league = new League({
+    if (!league) {
+      league = new League({
         name: leaguename,
       });
-      const {
-        id,
-      } = await league.save();
-      match.leagueId = id;
-    } else {
-      match.leagueId = leagueId;
+      entitiesToSave.push(league.save());
     }
 
-    if (homeTeamUnique) {
-      const homeTeam = new Team({
+    if (!homeTeam) {
+      homeTeam = new Team({
         name: homeTeamname,
       });
-      const {
-        id,
-      } = await homeTeam.save();
-      match.homeTeamId = id;
-    } else {
-      match.homeTeamId = homeTeamId;
+      entitiesToSave.push(homeTeam.save());
     }
 
-    if (awayTeamUnique) {
-      const awayTeam = new Team({
+    if (!awayTeam) {
+      awayTeam = new Team({
         name: awayTeamname,
       });
-      const {
-        id,
-      } = await awayTeam.save();
-      match.awayTeamId = id;
-    } else {
-      match.awayTeamId = awayTeamId;
+      entitiesToSave.push(awayTeam.save());
     }
+
+    await Promise.all(entitiesToSave);
 
     /*
-      Comparing match
+      Match populating for find similar
     */
 
-    const similarMatch = await Match.findOne(match);
+    const [
+      gameData,
+      leagueData,
+      homeTeamData,
+      awayTeamData,
+    ] = await Promise.all([
+      game.get(),
+      league.get(),
+      homeTeam.get(),
+      awayTeam.get(),
+    ]);
 
-    if (similarMatch) {
-      console.log(`found similar match: ${await similarMatch.get('_id')}`);
+    const match = {
+      'homeTeam._id': homeTeamData._id,
+      'awayTeam._id': awayTeamData._id,
+      date,
+    };
+
+    /*
+      Query matches
+    */
+
+    const matchCollision = await Match.findOne(match);
+
+    if (matchCollision) {
+      const debug = JSON.stringify(await matchCollision.get(), null, 4);
+      console.log('similar match');
+      //console.log(`found similar match: ${debug}`);
     } else {
-      const uniqueMatch = new Match(match);
-      const {
-        id: matchId,
-      } = await uniqueMatch.save();
-      console.log(`saved new match: ${matchId}`);
+      const uniqueMatch = new Match({
+        game: gameData,
+        league: leagueData,
+        homeTeam: homeTeamData,
+        awayTeam: awayTeamData,
+        date,
+      });
+
+      await uniqueMatch.save();
+      const debug = JSON.stringify(await uniqueMatch.get(), null, 4);
+
+      console.log('we saved new match');
+      //console.log(`saved new match: ${debug}`);
     }
   } catch (error) {
-    console.log(error)
+    throw error;
   }
 }
 
