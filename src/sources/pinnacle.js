@@ -34,7 +34,8 @@ class PinnacleSource {
     let league = leaguename;
     let game = null;
     // include here pinnacle related separators
-    const separators = [':', '-'];
+    // order is important e.g cs:go - all stars
+    const separators = ['-', ':'];
     // we only split once
     let alreadySplitted = null;
 
