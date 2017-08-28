@@ -33,12 +33,21 @@ class PinnacleSource {
   static splitNameIntoLeagueAndGame(leaguename) {
     let league = leaguename;
     let game = null;
+    // include here pinnacle related separators
+    const separators = [':', '-'];
+    // we only split once
+    let alreadySplitted = null;
 
-    // split by '-' separator to 2 part
-    const namesInArray = league.split('-', 2);
-    // trim whitespace and set league name
-    league = namesInArray[1].trim();
-    game = namesInArray[0].trim();
+    // find for separators
+    for (const separator of separators) {
+      if (league.indexOf(separator) !== -1 && !alreadySplitted) {
+        const namesInArray = league.split(separator, 2);
+        // trim whitespace and set both fields
+        league = namesInArray[1].trim();
+        game = namesInArray[0].trim();
+        alreadySplitted = true;
+      }
+    }
 
     return {
       league,
@@ -116,22 +125,24 @@ class PinnacleSource {
       // assign last time
       lastFetchTime = last;
 
-      for (const leagueWithMatch of leaguesWithMatches) { // eslint-disable-line
+      for (const leagueWithMatch of leaguesWithMatches) {
         let {
           name: leaguename,
         } = leagueWithMatch;
 
         let gamename = null;
+        console.log(leaguename)
 
-        if (leaguename.indexOf('-') !== -1) {
-          const {
-            league,
-            game,
-          } = PinnacleSource.splitNameIntoLeagueAndGame(leaguename);
-          leaguename = league;
-          gamename = game;
-        }
+        // split into game and league
+        const {
+          league,
+          game,
+        } = PinnacleSource.splitNameIntoLeagueAndGame(leaguename);
+        // get data
+        leaguename = league;
+        gamename = game;
 
+        // strip out irrelevant keywords
         gamename = PinnacleSource.findAndRemoveKeywords(gamename);
 
         leagueWithMatch.events.forEach((match) => {
