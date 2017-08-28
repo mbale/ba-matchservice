@@ -158,4 +158,4 @@ router.post('/tasks/match', async (ctx, next) => {
 app.use(bodyParser());
 app.use(router.routes());
 
-app.listen(process.env.PORT);
+app.listen(process.env.PORT || 4000);
