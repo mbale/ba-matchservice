@@ -4,7 +4,7 @@ import {
 
 class Source extends Model {
   static collection() {
-    return '_sources';
+    return 'sources';
   }
 }
 
