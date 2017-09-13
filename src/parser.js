@@ -1,6 +1,3 @@
-import {
-  ObjectId,
-} from 'mongorito';
 import Match from './models/match.js';
 import Game from './models/game.js';
 import League from './models/league.js';
@@ -9,113 +6,168 @@ import LeagueComparator from './comparators/league.js';
 import GameComparator from './comparators/game.js';
 import TeamComparator from './comparators/team.js';
 
-async function parser(matchData) {
-  try {
-    const {
-      homeTeam: homeTeamname,
-      awayTeam: awayTeamname,
-      league: leaguename,
-      game: gamename,
-    } = matchData;
+class MatchParser {
+  constructor(opts = {
+    debug: false,
+  }) {
+    this.debugMode = opts.debug;
+    const debugMode = this.debugMode;
 
-    let {
-      date,
-    } = matchData;
-
-    date = new Date(date);
-
-    const [
-      gameCollection,
-      leagueCollection,
-      teamCollection,
-    ] = await Promise.all([
-      Game.find(),
-      League.find(),
-      Team.find(),
-    ]);
-
-
-    let [
-      game,
-      league,
-      homeTeam,
-      awayTeam,
-    ] = await Promise.all([
-      GameComparator.findSimilar(gamename, gameCollection),
-      LeagueComparator.findSimilar(leaguename, leagueCollection),
-      TeamComparator.findSimilar(homeTeamname, teamCollection),
-      TeamComparator.findSimilar(awayTeamname, teamCollection),
-    ]);
-
-    /*
-      Saving unique entities
-    */
-
-    const entitiesToSave = [];
-
-    if (!game) {
-      game = new Game({
-        name: gamename,
-      });
-      entitiesToSave.push(game.save());
+    console.log(`Initiating MatchParser with debug mode: ${debugMode}`);
+    if (debugMode) {
+      console.log('We won\'t save anything');
     }
+  }
 
-    if (!league) {
-      league = new League({
-        name: leaguename,
-      });
-      entitiesToSave.push(league.save());
-    }
+  async analyze(matchToTry, opts = {}) {
+    try {
+      const debugMode = this.debugMode;
 
-    if (!homeTeam) {
-      homeTeam = new Team({
-        name: homeTeamname,
-      });
-      entitiesToSave.push(homeTeam.save());
-    }
+      const {
+        homeTeam: homeTeamname,
+        awayTeam: awayTeamname,
+        league: leaguename,
+        game: gamename,
+      } = matchToTry;
 
-    if (!awayTeam) {
-      awayTeam = new Team({
-        name: awayTeamname,
-      });
-      entitiesToSave.push(awayTeam.save());
-    }
+      const {
+        homeTeam: homeTeamComparatorOpts,
+        awayTeam: awayTeamComparatorOpts,
+        league: leagueComparatorOpts,
+        game: gameComparatorOpts,
+      } = opts;
 
-    await Promise.all(entitiesToSave);
+      let {
+        date,
+      } = matchToTry;
 
-    /*
-      Match populating for find similar
-    */
+      //  Schema check
+      if (!homeTeamname || !awayTeamname || !leaguename || !gamename || !date) {
+        return {
+          type: 2,
+        };
+      }
 
-    const [
-      gameData,
-      leagueData,
-      homeTeamData,
-      awayTeamData,
-    ] = await Promise.all([
-      game.get(),
-      league.get(),
-      homeTeam.get(),
-      awayTeam.get(),
-    ]);
+      date = new Date(date);
 
-    const match = {
-      'homeTeam._id': homeTeamData._id,
-      'awayTeam._id': awayTeamData._id,
-      date,
-    };
+      const [
+        gameCollection,
+        leagueCollection,
+        teamCollection,
+      ] = await Promise.all([
+        Game.find(),
+        League.find(),
+        Team.find(),
+      ]);
 
-    /*
-      Query matches
-    */
 
-    const matchCollision = await Match.findOne(match);
+      let [
+        game,
+        league,
+        homeTeam,
+        awayTeam,
+      ] = await Promise.all([
+        GameComparator.findSimilar(gamename, gameCollection, gameComparatorOpts),
+        LeagueComparator.findSimilar(leaguename, leagueCollection, leagueComparatorOpts),
+        TeamComparator.findSimilar(homeTeamname, teamCollection, homeTeamComparatorOpts),
+        TeamComparator.findSimilar(awayTeamname, teamCollection, awayTeamComparatorOpts),
+      ]);
 
-    if (matchCollision) {
-      const debug = JSON.stringify(await matchCollision.get(), null, 4);
-      console.log('similar match');
-      //console.log(`found similar match: ${debug}`);
-    } else {
+      if (debugMode) {
+        const andQuery = {};
+
+        if (game) {
+          andQuery.game = await game.get('_id');
+        }
+
+        if (league) {
+          andQuery.league = await league.get('_id');
+        }
+
+        if (homeTeam) {
+          andQuery.homeTeam = await homeTeam.get('_id');
+        }
+
+        if (awayTeam) {
+          andQuery.awayTeam = await awayTeam.get('_id');
+        }
+
+        const similarMatch = await Match.findOne(andQuery);
+      }
+
+      /*
+        Saving unique entities
+      */
+
+      const entitiesToSave = [];
+
+      if (!game) {
+        game = new Game({
+          name: gamename,
+        });
+        entitiesToSave.push(game.save());
+      }
+
+      if (!league) {
+        league = new League({
+          name: leaguename,
+        });
+        entitiesToSave.push(league.save());
+      }
+
+      if (!homeTeam) {
+        homeTeam = new Team({
+          name: homeTeamname,
+        });
+        entitiesToSave.push(homeTeam.save());
+      }
+
+      if (!awayTeam) {
+        awayTeam = new Team({
+          name: awayTeamname,
+        });
+        entitiesToSave.push(awayTeam.save());
+      }
+
+      await Promise.all(entitiesToSave);
+
+      /*
+        Match populating for find similar
+      */
+
+      const [
+        gameData,
+        leagueData,
+        homeTeamData,
+        awayTeamData,
+      ] = await Promise.all([
+        game.get(),
+        league.get(),
+        homeTeam.get(),
+        awayTeam.get(),
+      ]);
+
+      const match = {
+        'homeTeam._id': homeTeamData._id,
+        'awayTeam._id': awayTeamData._id,
+        date,
+      };
+
+      /*
+        Query matches
+      */
+
+      const matchCollision = await Match.findOne(match);
+
+      if (matchCollision) {
+        const debug = JSON.stringify(await matchCollision.get(), null, 4);
+        console.log(`found similar match: ${debug}`);
+
+        return {
+          type: 0,
+        };
+      }
+
       const uniqueMatch = new Match({
         game: gameData,
         league: leagueData,
@@ -127,12 +179,15 @@ async function parser(matchData) {
       await uniqueMatch.save();
       const debug = JSON.stringify(await uniqueMatch.get(), null, 4);
 
-      console.log('we saved new match');
-      //console.log(`saved new match: ${debug}`);
+      console.log(`saved new match: ${debug}`);
+
+      return {
+        type: 1,
+      };
+    } catch (error) {
+      throw error;
     }
-  } catch (error) {
-    throw error;
   }
 }
 
-export default parser;
+export default MatchParser;

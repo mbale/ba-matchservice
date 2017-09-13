@@ -30,31 +30,16 @@ class UnknownCorrelationIdError extends AppError {
   }
 }
 
-// class ThresholdInvalidError extends AppError {
-//   constructor(threshold = null) {
-//     super('Threshold\'s invalid');
+class ApiKeysUsedError extends AppError {
+  constructor(apiKeys) {
+    super('All apikeys are used')
 
-//     this.threshold = threshold;
-//   }
-// }
-
-// class KeywordInvalidError extends AppError {
-//   constructor(keyword = null) {
-//     super('Keyword\'s invalid');
-
-//     this.keyword = keyword;
-//   }
-// }
-
-// class KeywordDuplicationError extends AppError {
-//   constructor(keyword = null) {
-//     super('Keyword\'s already submitted');
-
-//     this.keyword = keyword;
-//   }
-// }
+    this.apiKeys = apiKeys;
+  }
+}
 
 export default {
   UnknownCorrelationIdError,
   InvalidSchemaError,
+  ApiKeysUsedError,
 };

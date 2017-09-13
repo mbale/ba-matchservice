@@ -2,14 +2,14 @@ import {
   Model,
 } from 'mongorito';
 
-class Source extends Model {
+class Cache extends Model {
   static collection() {
-    return 'sources';
+    return 'caches';
   }
 }
 
 function extendModel() {
-  return Source;
+  return Cache;
 }
 
 export default extendModel();

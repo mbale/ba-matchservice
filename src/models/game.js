@@ -26,9 +26,9 @@ const setDefaultFieldsOnCreate = () => ({ model }) => next => async (action) => 
         model.set('slug', '');
       }
 
-      if (typeof fields.valid === 'undefined') {
-        fields.valid = false;
-        model.set('valid', false);
+      if (typeof fields.keywords === 'undefined') {
+        fields.keywords = [];
+        model.set('keywords', []);
       }
     }
 

@@ -1,161 +1,358 @@
+import path from 'path';
 import dotenv from 'dotenv';
 import Raven from 'raven';
-import Koa from 'koa';
-import Router from 'koa-router';
-import bodyParser from 'koa-bodyparser';
+import express from 'express';
+import session from 'express-session';
+import bodyParser from 'body-parser';
+import passport from 'passport';
+import Strategy from 'passport-local';
+import cors from 'cors';
+import Queue from 'bull';
+import arena from 'bull-arena';
+import Types from './types.js';
 import initDbConnection from './db.js';
-import Transaction from './models/transaction.js';
-import Source from './models/source.js';
+import MatchParser from './parser.js';
+import Cache from './models/cache.js';
 import PinnacleSource from './sources/pinnacle.js';
-import parser from './parser.js';
+import OddsggSource from './sources/oddsgg.js';
+
+const {
+  ModeTypes,
+} = Types;
 
 dotenv.config();
 
 Raven.config(process.env.SENTRY_DSN).install();
 
-async function getLastRequest(source) {
-  const requests = await Source
+const supportedSources = [
+  'pinnacle',
+  'oddsgg',
+];
+
+async function getLatestCache(source) {
+  const requests = await Cache
     .sort('-_createdAt')
     .find({
       type: source,
     });
 
-  let lastRequest = null;
+  let latestCache = null;
 
   if (requests.length > 0) {
-    const {
-      lastFetchTime,
-    } = await requests[requests.length - 1].get();
-    lastRequest = lastFetchTime;
+    latestCache = await requests[requests.length - 1].get();
   }
 
-  return {
-    type: source,
-    lastFetchTime: lastRequest,
+  return latestCache;
+}
+
+/*
+  Main
+*/
+
+async function main() {
+  await initDbConnection();
+
+  const HTTP_PORT = process.env.PORT || 4000;
+  const REDIS_URI = process.env.REDIS_URI || 'redis://redistogo:c3a75af9f438c7653a4a31b546590f41@crestfish.redistogo.com:10276/';
+
+  /*
+    Tasks
+  */
+
+  const redisQueues = {
+    initialMatchFetching: new Queue('initial-match-fetching', REDIS_URI),
   };
-}
 
-async function startTransaction(sources, opts) {
-  const transaction = new Transaction({
-    type: 'match',
-    sources,
-    opts,
-  });
+  /*
+    Pinnacle
+  */
+  redisQueues.initialMatchFetching.process('pinnacle', async (job) => {
+    /*
+      0.) Job options
+    */
 
-  await transaction.save();
-  return transaction;
-}
-
-const app = new Koa();
-const router = new Router({
-  prefix: '/api',
-});
-
-router.post('/tasks/match', async (ctx, next) => {
-  try {
     const {
-      request: {
-        body: {
-          sources = [],
-          opts = {},
-        },
-      },
-    } = ctx;
-
-    const coreDependencies = [
-      initDbConnection(),
-    ];
-
-    await Promise.all(coreDependencies);
-    const transaction = await startTransaction();
+      data: parserOpts,
+    } = job;
 
     /*
-      Get all information from last requests to cache
+      1.) Get latest cache if any
     */
 
-    const cacheDependencies = [];
+    let latestCacheTime = null;
+    let latestCache = null;
 
-    sources.forEach((source) => {
-      cacheDependencies.push(getLastRequest(source));
-    });
+    // we won't save cache in debug
+    if (!parserOpts.debug) {
+      latestCache = await getLatestCache('pinnacle');
 
-    // get cache before all match
-    const caches = await Promise.all(cacheDependencies);
-
-    const lastFetches = {};
-
-    // pair times with source
-    caches.forEach((cache) => {
-      lastFetches[cache.type] = cache.lastFetchTime;
-    });
-
-    /*
-      Check what kind of source we need data from
-    */
-
-    const sourceDependencies = [];
-
-    for (const source of sources) {
-      switch (source) {
-      case 'pinnacle':
-        sourceDependencies.push(PinnacleSource.getMatches(lastFetches.pinnacle));
-        // falls through
-      default:
+      if (latestCache) {
+        latestCacheTime = latestCache.time;
       }
     }
 
-    const matchAggregation = await Promise.all(sourceDependencies);
-
     /*
-      Get information from sources
+      2.) Get matches
     */
 
-    let matches = [];
+    const {
+      matches,
+      lastFetchTime,
+    } = await PinnacleSource.getMatches(latestCacheTime);
 
-    for (const aggr of matchAggregation) {
-      // merging all matches
-      matches = matches.concat(aggr.matches);
-    }
+    /*
+      3.) Match parsing
+    */
+
+    const results = {
+      duplicateCount: 0,
+      freshCount: 0,
+      invalidCount: 0,
+    };
+
+    const progressFraction = 100 / matches.length;
+    let progressCount = 0;
+
+    // pass runtime config for parsing process
+    const matchParser = new MatchParser(parserOpts);
 
     for (const match of matches) {
-      await parser(match);
+      const {
+        type,
+      } = await matchParser.analyze(match);
+
+      switch (type) {
+      case 0:
+        results.duplicateCount += 1;
+        break;
+      case 1:
+        results.freshCount += 1;
+        break;
+      default:
+        results.invalidCount += 1;
+        break;
+      }
+
+      const currentProgress = progressCount + progressFraction;
+      await job.progress(currentProgress);
+      progressCount = currentProgress;
     }
 
     /*
-      Save new cache informations
+      4.) Cache updating
     */
 
-    const freshCacheDependencies = [];
+    if (!parserOpts.debug) {
+      latestCache = new Cache({
+        type: 'pinnacle',
+        time: lastFetchTime,
+      });
 
-    const freshCaches = matchAggregation.map((aggr) => {
-      return {
-        type: aggr.type,
-        lastFetchTime: aggr.lastFetchTime,
-      };
-    });
-
-    for (const cache of freshCaches) {
-      // https://github.com/vadimdemedes/mongorito/issues/175
-      // we can't pass null as value
-      const freshCache = new Source(cache);
-      freshCacheDependencies.push(freshCache.save());
+      latestCache = await latestCache.save();
     }
 
-    await Promise.all(freshCacheDependencies);
-    await transaction.setSate('done');
+    /*
+      5.) Results
+    */
 
-    ctx.body = {
-      success: true,
-      details: await transaction.get(),
+    return JSON.stringify(results); // due to web interface we need to convert to string
+  });
+
+  /*
+    Oddsgg
+  */
+
+  redisQueues.initialMatchFetching.process('oddsgg', async (job) => {
+    const {
+      data: parserOpts,
+    } = job;
+    /*
+      1.) Get matches
+    */
+
+    const {
+      matches,
+    } = await OddsggSource.getMatches();
+
+    /*
+      2.) Match parsing
+    */
+
+    const matchParser = new MatchParser(parserOpts);
+
+    const results = {
+      duplicateCount: 0,
+      freshCount: 0,
+      invalidCount: 0,
     };
-    await next();
-  } catch (error) {
-    Raven.captureException(error);
-    throw ctx.throw(500, '', error);
-  }
-});
 
-app.use(bodyParser());
-app.use(router.routes());
+    const progressFraction = 100 / matches.length;
+    let progressCount = 0;
 
-app.listen(process.env.PORT || 4000);
+    for (const match of matches) {
+      const {
+        type,
+      } = await matchParser.analyze(match);
+
+      switch (type) {
+      case 0:
+        results.duplicateCount += 1;
+        break;
+      case 1:
+        results.freshCount += 1;
+        break;
+      default:
+        results.invalidCount += 1;
+        break;
+      }
+
+      const currentProgress = progressCount + progressFraction;
+      await job.progress(currentProgress);
+      progressCount = currentProgress;
+    }
+
+    /*
+      3.) Results
+    */
+
+    return JSON.stringify(results); // due to web interface we need to convert to string
+  });
+
+  /*
+    Http
+  */
+
+  passport.use(new Strategy(async (username, password, done) => {
+    if (username === 'bali' && password === 'devbali') {
+      return done(null, {
+        username,
+      });
+    }
+
+    if (username === 'seb' && password === 'devseb') {
+      return done(null, {
+        username,
+      });
+    }
+    return done(null, false, {
+      message: 'Incorrect credentials.',
+    });
+  }));
+
+  passport.serializeUser((user, done) => {
+    done(null, user);
+  });
+
+  passport.deserializeUser((user, done) => {
+    done(null, user);
+  });
+
+  const queues = [{
+    name: 'initial-match-fetching',
+    url: 'redis://redistogo:c3a75af9f438c7653a4a31b546590f41@crestfish.redistogo.com:10276/',
+    hostId: 'betacle',
+    type: 'bull',
+  }];
+
+  const admin = arena({
+    queues,
+  }, {
+    basePath: '/admin',
+    disableListen: true,
+  });
+
+  const app = express();
+
+  app.set('views', path.join(__dirname, 'http/views'));
+  app.set('view engine', 'pug');
+
+  app.use(bodyParser.urlencoded({
+    extended: true,
+  }));
+
+  app.use(session({
+    secret: '123',
+    resave: false,
+    saveUninitialized: false,
+  }));
+
+  app.use(cors());
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  app.post('/login', passport.authenticate('local', {
+    successRedirect: '/admin',
+    failureRedirect: '/',
+    failureFlash: false },
+  ));
+
+  app.get('/', (request, response) => {
+    response.render('login');
+  });
+
+  app.post('/api/tasks/initial-match-fetching', bodyParser.json(), (request, response) => {
+    try {
+      const {
+        body,
+      } = request;
+
+      if (!body || Object.keys(body).length === 0) {
+        return response
+          .status(400)
+          .send('Empty or bad POST data.');
+      }
+
+      if (!body.taskOpts) {
+        return response
+          .status(400)
+          .send('Missing "taskOpts" key.');
+      }
+
+      if (!body.taskOpts.source ||
+        !supportedSources.includes(body.taskOpts.source)) {
+        return response
+          .status(400)
+          .send('Missing or invalid source');
+      }
+
+      if (!body.taskOpts.cron) {
+        return response
+            .status(400)
+            .send('Missing cron.');
+      }
+
+      const taskConfig = {
+        repeat: {
+          cron: body.taskOpts.cron,
+        },
+      };
+
+      const taskData = body.parserOpts || {};
+
+      redisQueues.initialMatchFetching.add(body.taskOpts.source, taskData, taskConfig);
+
+      return response
+        .status(200)
+        .send('OK');
+    } catch (error) {
+      return response
+        .status(500)
+        .send('We fucked up something');
+    }
+  });
+
+
+  app.use((req, res, next) => {
+    const isLoggedIn = req.isAuthenticated();
+    if (!isLoggedIn) {
+      return res.redirect('/');
+    }
+    return next();
+  }, admin);
+
+  app.listen(HTTP_PORT);
+}
+
+main();
+

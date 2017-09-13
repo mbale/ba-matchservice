@@ -132,7 +132,6 @@ class PinnacleSource {
         } = leagueWithMatch;
 
         let gamename = null;
-        console.log(leaguename)
 
         // split into game and league
         const {

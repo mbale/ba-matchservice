@@ -1,15 +1,24 @@
 import Utils from '../utils.js';
+import Types from '../types.js';
+
+const {
+  ModeTypes,
+} = Types;
 
 class GameComparator {
   static async findSimilar(gamename, gameCollection, opts = {}) {
+    const {
+      mode = ModeTypes.StrictOnly, // default
+      thresholds = {
+        dice: 0.7, // default
+        levenshtein: 3, // default
+      },
+    } = opts;
+
     const gamenameLowercase = gamename.toLowerCase();
     const games = gameCollection;
 
     let gameEntity = null;
-
-    const {
-      algoCheck = false,
-    } = opts;
 
     if (games.length > 0) {
       const relatedGames = [];
@@ -17,21 +26,35 @@ class GameComparator {
       // we check similarity with every entity in db
       for (const game of games) {
         const gamenameInDb = await game.get('name');
+        const keywords = await game.get('keywords') || [];
 
-        const strictlyEquals = gamenameInDb.toLowerCase() === gamenameLowercase;
+        // TODO: forbidden check
+        /*
+          1.) Strict check
+          // default if mode was not set up
+        */
+        if (mode === ModeTypes.StrictOnly || mode === ModeTypes.StrictAndSimilar) {
+          const strictlyEquals = gamenameInDb.toLowerCase() === gamenameLowercase;
+          const keywordEquals = keywords.includes(keyword =>
+            keyword.toLowerCase() === gamenameLowercase);
 
-        // strictly equal
-        if (strictlyEquals) {
-          relatedGames.push(Utils.similarityType('strict', game));
+          // strictly equal
+          if (strictlyEquals || keywordEquals) {
+            relatedGames.push(Utils.similarityType('strict', game));
+          }
         }
 
-        if (algoCheck && !strictlyEquals) {
+        /*
+          2.) (optional) similarity check
+          TOOD: implement keyword checking
+        */
+        if (mode === ModeTypes.SimilarOnly || mode === ModeTypes.StrictAndSimilar) {
           const {
-            dice: diceValue, // int
-            levenshtein: levenshteinValue,
+            dice: diceValue, // similar
+            levenshtein: levenshteinValue, // metric distance
           } = Utils.similarityCalculation(gamenameInDb, gamename);
 
-          if (diceValue >= 0.7 && levenshteinValue <= 3) {
+          if (diceValue >= thresholds.dice && levenshteinValue <= thresholds.levenshtein) {
             // similar but char differences are between ]0,3] equal by length
             relatedGames.push(Utils.similarityType('algo', game, {
               similarity: diceValue,
