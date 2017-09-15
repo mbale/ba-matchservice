@@ -10,52 +10,6 @@ class OddsggSource {
     const GET_MATCHES_URL = process.env.ODDSGG_GET_MATCHES_URL;
     const GET_LEAGUES_URL = process.env.ODDSGG_GET_LEAGUES_URL;
 
-    // Id: 106322,
-    // StartTime: '2017-09-02T16:00:00',
-    // Visible: true,
-    // SportId: 144,
-    // TournamentId: 18306,
-    // HomeTeamId: 155610,
-    // HomeTeamName: 'Zealots',
-    // AwayTeamId: 151538,
-    // Type: 1,
-    // AwayTeamName: 'Team expert',
-    // Score: '0:0',
-    // OutrightName: null,
-    // EndTime: null },
-
-    // "Id": 3296,
-    // "CategoryName": "Dota 2",
-    // "SportId": 144,
-    // "Tournaments": [
-    //   {
-    //     "Id": 18181,
-    //     "Name": "ROG Masters",
-    //     "CategoryId": 3296
-    //   },
-    //   {
-    //     "Id": 18263,
-    //     "Name": "SL iLeague StarSeries",
-    //     "CategoryId": 3296
-    //   },
-    //   {
-    //     "Id": 18275,
-    //     "Name": "EU Prodota Cup",
-    //     "CategoryId": 3296
-    //   },
-    //   {
-    //     "Id": 18277,
-    //     "Name": "SEA ProDota Cup",
-    //     "CategoryId": 3296
-    //   },
-    //   {
-    //     "Id": 17364,
-    //     "Name": "StarLadder i-League Qualifier",
-    //     "CategoryId": 3296
-    //   }
-    // ]
-
-
     let needToFetch = true;
     let usedTokenIndex = 0;
 
@@ -145,7 +99,6 @@ class OddsggSource {
       matchInSchema.awayTeam = match.AwayTeamName;
       matchInSchema.date = match.StartTime;
       matchesInSchema.push(matchInSchema);
-      console.log(matchInSchema)
     }
 
     return {

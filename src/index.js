@@ -9,16 +9,18 @@ import Strategy from 'passport-local';
 import cors from 'cors';
 import Queue from 'bull';
 import arena from 'bull-arena';
-import Types from './types.js';
+import Comparator, {
+  CompareModeTypes,
+  CompareResultTypes,
+} from './comparator.js';
 import initDbConnection from './db.js';
-import MatchParser from './parser.js';
+import MatchParser, {
+  ParserResultTypes,
+} from './parser.js';
 import Cache from './models/cache.js';
 import PinnacleSource from './sources/pinnacle.js';
 import OddsggSource from './sources/oddsgg.js';
 
-const {
-  ModeTypes,
-} = Types;
 
 dotenv.config();
 
@@ -70,10 +72,44 @@ async function main() {
     /*
       0.) Job options
     */
-
-    const {
+    // default ones
+    let {
       data: parserOpts,
     } = job;
+
+    if (Object.keys(parserOpts).length === 0) {
+      parserOpts = {
+        homeTeam: {
+          mode: CompareModeTypes.StrictAndSimilar,
+          thresholds: {
+            dice: 0.8,
+            levenshtein: 1,
+          },
+        },
+        awayTeam: {
+          mode: CompareModeTypes.StrictAndSimilar,
+          thresholds: {
+            dice: 0.8,
+            levenshtein: 1,
+          },
+        },
+        league: {
+          mode: CompareModeTypes.StrictAndSimilar,
+          thresholds: {
+            dice: 0.7,
+            levenshtein: 1,
+          },
+        },
+        game: {
+          mode: CompareModeTypes.StrictAndSimilar,
+          thresholds: {
+            dice: 0.8,
+            levenshtein: 2,
+          },
+        },
+        debug: true,
+      };
+    }
 
     /*
       1.) Get latest cache if any
@@ -104,6 +140,11 @@ async function main() {
       3.) Match parsing
     */
 
+    // pass runtime config for parsing process
+    const matchParser = new MatchParser({
+      debug: parserOpts.debug,
+    });
+
     const results = {
       duplicateCount: 0,
       freshCount: 0,
@@ -113,20 +154,18 @@ async function main() {
     const progressFraction = 100 / matches.length;
     let progressCount = 0;
 
-    // pass runtime config for parsing process
-    const matchParser = new MatchParser(parserOpts);
-
     for (const match of matches) {
-      const {
-        type,
-      } = await matchParser.analyze(match);
+      const result = await matchParser.analyze(match, parserOpts);
 
-      switch (type) {
-      case 0:
+      switch (result) {
+      case ParserResultTypes.Duplicate:
         results.duplicateCount += 1;
         break;
-      case 1:
+      case ParserResultTypes.Fresh:
         results.freshCount += 1;
+        break;
+      case ParserResultTypes.Invalid:
+        results.invalidCount += 1;
         break;
       default:
         results.invalidCount += 1;
@@ -135,7 +174,8 @@ async function main() {
 
       const currentProgress = progressCount + progressFraction;
       await job.progress(currentProgress);
-      progressCount = currentProgress;
+      progressCount = Math.ceil(currentProgress * 10) / 10;
+      console.log(`${progressCount}%`);
     }
 
     /*
@@ -163,9 +203,14 @@ async function main() {
   */
 
   redisQueues.initialMatchFetching.process('oddsgg', async (job) => {
+    /*
+      0.) Job options
+    */
+
     const {
       data: parserOpts,
     } = job;
+
     /*
       1.) Get matches
     */
@@ -173,12 +218,6 @@ async function main() {
     const {
       matches,
     } = await OddsggSource.getMatches();
-
-    /*
-      2.) Match parsing
-    */
-
-    const matchParser = new MatchParser(parserOpts);
 
     const results = {
       duplicateCount: 0,
@@ -188,6 +227,11 @@ async function main() {
 
     const progressFraction = 100 / matches.length;
     let progressCount = 0;
+
+    // pass runtime config for parsing process
+    const matchParser = new MatchParser({
+      debug: parserOpts.debug,
+    });
 
     for (const match of matches) {
       const {
@@ -211,8 +255,10 @@ async function main() {
       progressCount = currentProgress;
     }
 
+    await job.progress(100);
+
     /*
-      3.) Results
+      4.) Results
     */
 
     return JSON.stringify(results); // due to web interface we need to convert to string
@@ -328,7 +374,9 @@ async function main() {
         },
       };
 
-      const taskData = body.parserOpts || {};
+      const taskData = body.parserOpts;
+
+      console.log(taskData)
 
       redisQueues.initialMatchFetching.add(body.taskOpts.source, taskData, taskConfig);
 

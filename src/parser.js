@@ -1,10 +1,19 @@
+import {
+  ObjectId,
+} from 'mongorito';
 import Match from './models/match.js';
 import Game from './models/game.js';
 import League from './models/league.js';
 import Team from './models/team.js';
-import LeagueComparator from './comparators/league.js';
-import GameComparator from './comparators/game.js';
-import TeamComparator from './comparators/team.js';
+import Comparator, {
+  CompareResultTypes,
+} from './comparator.js';
+
+const ParserResultTypes = {
+  Fresh: 'Fresh',
+  Duplicate: 'Duplication',
+  Invalid: 'Invalid',
+};
 
 class MatchParser {
   constructor(opts = {
@@ -43,14 +52,13 @@ class MatchParser {
 
       //  Schema check
       if (!homeTeamname || !awayTeamname || !leaguename || !gamename || !date) {
-        return {
-          type: 2,
-        };
+        return ParserResultTypes.Invalid;
       }
 
       date = new Date(date);
 
-      const [
+      // get collections
+      let [
         gameCollection,
         leagueCollection,
         teamCollection,
@@ -60,134 +68,162 @@ class MatchParser {
         Team.find(),
       ]);
 
+      gameCollection = await Promise.all(gameCollection.map(game => game.get()));
+      leagueCollection = await Promise.all(leagueCollection.map(league => league.get()));
+      teamCollection = await Promise.all(teamCollection.map(team => team.get()));
 
-      let [
-        game,
-        league,
-        homeTeam,
-        awayTeam,
-      ] = await Promise.all([
-        GameComparator.findSimilar(gamename, gameCollection, gameComparatorOpts),
-        LeagueComparator.findSimilar(leaguename, leagueCollection, leagueComparatorOpts),
-        TeamComparator.findSimilar(homeTeamname, teamCollection, homeTeamComparatorOpts),
-        TeamComparator.findSimilar(awayTeamname, teamCollection, awayTeamComparatorOpts),
-      ]);
-
-      if (debugMode) {
-        const andQuery = {};
-
-        if (game) {
-          andQuery.game = await game.get('_id');
-        }
-
-        if (league) {
-          andQuery.league = await league.get('_id');
-        }
-
-        if (homeTeam) {
-          andQuery.homeTeam = await homeTeam.get('_id');
-        }
-
-        if (awayTeam) {
-          andQuery.awayTeam = await awayTeam.get('_id');
-        }
-
-        const similarMatch = await Match.findOne(andQuery);
-      }
-
-      /*
-        Saving unique entities
-      */
-
-      const entitiesToSave = [];
-
-      if (!game) {
-        game = new Game({
-          name: gamename,
-        });
-        entitiesToSave.push(game.save());
-      }
-
-      if (!league) {
-        league = new League({
-          name: leaguename,
-        });
-        entitiesToSave.push(league.save());
-      }
-
-      if (!homeTeam) {
-        homeTeam = new Team({
-          name: homeTeamname,
-        });
-        entitiesToSave.push(homeTeam.save());
-      }
-
-      if (!awayTeam) {
-        awayTeam = new Team({
-          name: awayTeamname,
-        });
-        entitiesToSave.push(awayTeam.save());
-      }
-
-      await Promise.all(entitiesToSave);
-
-      /*
-        Match populating for find similar
-      */
-
+      // get results
       const [
-        gameData,
-        leagueData,
-        homeTeamData,
-        awayTeamData,
+        {
+          type: gameComparatorResult,
+          entity: gameEntity,
+        },
+        {
+          type: leagueComparatorResult,
+          entity: leagueEntity,
+        },
+        {
+          type: homeTeamComparatorResult,
+          entity: homeTeamEntity,
+        },
+        {
+          type: awayTeamComparatorResult,
+          entity: awayTeamEntity,
+        },
       ] = await Promise.all([
-        game.get(),
-        league.get(),
-        homeTeam.get(),
-        awayTeam.get(),
+        Comparator.compareEntityWithCollection(
+          gamename, gameCollection, gameComparatorOpts,
+        ),
+        Comparator.compareEntityWithCollection(
+          leaguename, leagueCollection, leagueComparatorOpts,
+        ),
+        Comparator.compareEntityWithCollection(
+          homeTeamname, teamCollection, homeTeamComparatorOpts,
+        ),
+        Comparator.compareEntityWithCollection(
+          awayTeamname, teamCollection, awayTeamComparatorOpts,
+        ),
       ]);
 
-      const match = {
-        'homeTeam._id': homeTeamData._id,
-        'awayTeam._id': awayTeamData._id,
-        date,
+
+      // dupe check
+      const andQuery = {
       };
 
-      /*
-        Query matches
-      */
-
-      const matchCollision = await Match.findOne(match);
-
-      if (matchCollision) {
-        const debug = JSON.stringify(await matchCollision.get(), null, 4);
-        console.log(`found similar match: ${debug}`);
-
-        return {
-          type: 0,
-        };
+      if (date) {
+        andQuery.date = date;
       }
 
-      const uniqueMatch = new Match({
-        game: gameData,
-        league: leagueData,
-        homeTeam: homeTeamData,
-        awayTeam: awayTeamData,
-        date,
-      });
+      if (leagueComparatorResult === CompareResultTypes.Existing) {
+        andQuery.league = new ObjectId(leagueEntity._id);
+      }
 
-      await uniqueMatch.save();
-      const debug = JSON.stringify(await uniqueMatch.get(), null, 4);
+      if (homeTeamComparatorResult === CompareResultTypes.Existing) {
+        andQuery.homeTeam = new ObjectId(homeTeamEntity._id);
+      }
 
-      console.log(`saved new match: ${debug}`);
+      if (awayTeamComparatorResult === CompareResultTypes.Existing) {
+        andQuery.awayTeam = new ObjectId(awayTeamEntity._id);
+      }
 
-      return {
-        type: 1,
-      };
+      const similarMatch = await Match.findOne(andQuery);
+
+      if (similarMatch) {
+        const debugMatch = JSON.stringify(await similarMatch.get(), null, 4);
+        console.log(`Similar match: ${debugMatch}`);
+        return ParserResultTypes.Duplicate;
+      }
+
+      // only save if no debug mode and similarmatch
+      // save
+      if (!debugMode) {
+        let game = null;
+        let league = null;
+        let homeTeam = null;
+        let awayTeam = null;
+
+        const entities = [];
+
+        if (gameComparatorResult === CompareResultTypes.New) {
+          game = new Game({
+            name: gameEntity,
+          });
+          entities.push(game.save());
+        } else {
+          entities.push({
+            id: gameEntity._id,
+          });
+        }
+
+        if (leagueComparatorResult === CompareResultTypes.New) {
+          league = new League({
+            name: leagueEntity,
+          });
+          entities.push(league.save());
+        } else {
+          entities.push({
+            id: leagueEntity._id,
+          });
+        }
+
+        if (homeTeamComparatorResult === CompareResultTypes.New) {
+          homeTeam = new Team({
+            name: homeTeamEntity,
+          });
+          entities.push(homeTeam.save());
+        } else {
+          entities.push({
+            id: homeTeamEntity._id,
+          });
+        }
+
+        if (awayTeamComparatorResult === CompareResultTypes.New) {
+          awayTeam = new Team({
+            name: awayTeamEntity,
+          });
+          entities.push(awayTeam.save());
+        } else {
+          entities.push({
+            id: awayTeamEntity._id,
+          });
+        }
+
+        const [{
+          id: gameId,
+        }, {
+          id: leagueId,
+        }, {
+          id: homeTeamId,
+        }, {
+          id: awayTeamId,
+        }] = await Promise.all(entities);
+
+        const match = new Match({
+          league: leagueId,
+          game: gameId,
+          homeTeam: homeTeamId,
+          awayTeam: awayTeamId,
+          date,
+        });
+
+        const {
+          id: matchId,
+        } = await match.save();
+
+        const debugMatch = JSON.stringify(matchId, null, 4);
+        console.log(`Unique match: ${debugMatch}`);
+        return ParserResultTypes.Fresh;
+      }
+
+      return ParserResultTypes.Fresh;
     } catch (error) {
+      console.log(error)
       throw error;
     }
   }
 }
 
 export default MatchParser;
+export {
+  ParserResultTypes,
+};
