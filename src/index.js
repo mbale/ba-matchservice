@@ -211,6 +211,40 @@ async function main() {
       data: parserOpts,
     } = job;
 
+    if (Object.keys(parserOpts).length === 0) {
+      parserOpts = {
+        homeTeam: {
+          mode: CompareModeTypes.StrictAndSimilar,
+          thresholds: {
+            dice: 0.8,
+            levenshtein: 1,
+          },
+        },
+        awayTeam: {
+          mode: CompareModeTypes.StrictAndSimilar,
+          thresholds: {
+            dice: 0.8,
+            levenshtein: 1,
+          },
+        },
+        league: {
+          mode: CompareModeTypes.StrictAndSimilar,
+          thresholds: {
+            dice: 0.7,
+            levenshtein: 1,
+          },
+        },
+        game: {
+          mode: CompareModeTypes.StrictAndSimilar,
+          thresholds: {
+            dice: 0.8,
+            levenshtein: 2,
+          },
+        },
+        debug: true,
+      };
+    }
+
     /*
       1.) Get matches
     */
@@ -218,6 +252,11 @@ async function main() {
     const {
       matches,
     } = await OddsggSource.getMatches();
+
+    // pass runtime config for parsing process
+    const matchParser = new MatchParser({
+      debug: parserOpts.debug,
+    });
 
     const results = {
       duplicateCount: 0,
@@ -228,22 +267,18 @@ async function main() {
     const progressFraction = 100 / matches.length;
     let progressCount = 0;
 
-    // pass runtime config for parsing process
-    const matchParser = new MatchParser({
-      debug: parserOpts.debug,
-    });
-
     for (const match of matches) {
-      const {
-        type,
-      } = await matchParser.analyze(match);
+      const result = await matchParser.analyze(match, parserOpts);
 
-      switch (type) {
-      case 0:
+      switch (result) {
+      case ParserResultTypes.Duplicate:
         results.duplicateCount += 1;
         break;
-      case 1:
+      case ParserResultTypes.Fresh:
         results.freshCount += 1;
+        break;
+      case ParserResultTypes.Invalid:
+        results.invalidCount += 1;
         break;
       default:
         results.invalidCount += 1;
@@ -252,10 +287,9 @@ async function main() {
 
       const currentProgress = progressCount + progressFraction;
       await job.progress(currentProgress);
-      progressCount = currentProgress;
+      progressCount = Math.ceil(currentProgress * 10) / 10;
+      console.log(`${progressCount}%`);
     }
-
-    await job.progress(100);
 
     /*
       4.) Results
