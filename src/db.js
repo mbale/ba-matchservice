@@ -3,7 +3,6 @@ import {
   Database,
 } from 'mongorito';
 import timestamps from 'mongorito-timestamps';
-import Transaction from './models/transaction.js';
 import Cache from './models/cache.js';
 import Match from './models/match.js';
 import League from './models/league.js';
@@ -23,7 +22,6 @@ async function initDbConnection() {
     updatedAt: '_updatedAt',
   }));
   // registering model
-  db.register(Transaction);
   db.register(Cache);
   db.register(Game);
   db.register(Match);
