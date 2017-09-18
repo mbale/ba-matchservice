@@ -55,7 +55,7 @@ async function main() {
   await initDbConnection();
 
   const HTTP_PORT = process.env.PORT || 4000;
-  const REDIS_URI = process.env.REDIS_URI || 'redis://redistogo:c3a75af9f438c7653a4a31b546590f41@crestfish.redistogo.com:10276/';
+  const REDIS_URI = process.env.REDIS_URL;
 
   /*
     Tasks
