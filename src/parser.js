@@ -198,11 +198,37 @@ class MatchParser {
           id: awayTeamId,
         }] = await Promise.all(entities);
 
+        const [
+          gameInDb,
+          leagueInDb,
+          homeTeamInDb,
+          awayTeamInDb,
+        ] = await Promise.all([
+          Game.findOne({
+            _id: new ObjectId(gameId),
+          }),
+          League.findOne({
+            _id: new ObjectId(leagueId),
+          }),
+          Team.findOne({
+            _id: new ObjectId(homeTeamId),
+          }),
+          Team.findOne({
+            _id: new ObjectId(awayTeamId),
+          }),
+        ]);
+
+        // assign whole instances
+        game = await gameInDb.get();
+        league = await leagueInDb.get();
+        homeTeam = await homeTeamInDb.get();
+        awayTeam = await awayTeamInDb.get();
+
         const match = new Match({
-          league: leagueId,
-          game: gameId,
-          homeTeam: homeTeamId,
-          awayTeam: awayTeamId,
+          league,
+          game,
+          homeTeam,
+          awayTeam,
           date,
         });
 
