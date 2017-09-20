@@ -72,7 +72,7 @@ class PinnacleSource {
     return team;
   }
 
-  static async getMatches(since, opts = {}) {
+  static async getMatches(since) {
     const {
       data: {
         leagues,
