@@ -72,17 +72,22 @@ class PinnacleSource {
     return team;
   }
 
-  static async getMatches(since, opts = {}) {
+  static async getMatches(since) {
+    const GET_LEAGUES_URL = process.env.PINNACLE_GET_LEAGUES_URL;
+    const GET_MATCHES_URL = process.env.PINNACLE_GET_MATCHES_URL;
+    const SPORT_ID = process.env.PINNACLE_SPORT_ID;
+    const API_KEY = process.env.PINNACLE_API_KEY;
+
     const {
       data: {
         leagues,
       },
-    } = await axios.get(process.env.PINNACLE_GET_LEAGUES_URL, {
+    } = await axios.get(GET_LEAGUES_URL, {
       params: {
-        sportid: process.env.PINNACLE_SPORTID,
+        sportid: SPORT_ID,
       },
       headers: {
-        Authorization: `Basic ${process.env.PINNACLE_API_KEY}`,
+        Authorization: `Basic ${API_KEY}`,
       },
     });
 
@@ -98,7 +103,7 @@ class PinnacleSource {
     }
 
     const matchParams = {
-      sportId: process.env.PINNACLE_SPORTID,
+      sportId: SPORT_ID,
       leagueIds,
     };
 
@@ -108,10 +113,10 @@ class PinnacleSource {
 
     const {
       data,
-    } = await axios.get(process.env.PINNACLE_GET_MATCHES_URL, {
+    } = await axios.get(GET_MATCHES_URL, {
       params: matchParams,
       headers: {
-        Authorization: `Basic ${process.env.PINNACLE_API_KEY}`,
+        Authorization: `Basic ${API_KEY}`,
       },
     });
 

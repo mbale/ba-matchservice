@@ -1,19 +1,24 @@
 import {
   ObjectId,
 } from 'mongorito';
-import Match from './models/match.js';
-import Game from './models/game.js';
-import League from './models/league.js';
-import Team from './models/team.js';
 import Comparator, {
   CompareResultTypes,
 } from './comparator.js';
+import {
+  initLoggerInstance,
+} from './init.js';
+import Match from './models/match.js';
+import League from './models/league.js';
+import Team from './models/team.js';
+import Game from './models/game.js';
 
 const ParserResultTypes = {
   Fresh: 'Fresh',
   Duplicate: 'Duplication',
   Invalid: 'Invalid',
 };
+
+const logger = initLoggerInstance();
 
 class MatchParser {
   constructor(opts = {
@@ -22,9 +27,9 @@ class MatchParser {
     this.debugMode = opts.debug;
     const debugMode = this.debugMode;
 
-    console.log(`Initiating MatchParser with debug mode: ${debugMode}`);
+    logger.info(`Initiating MatchParser with debug mode: ${debugMode}`);
     if (debugMode) {
-      console.log('We won\'t save anything');
+      logger.info('We won\'t save anything');
     }
   }
 
@@ -105,33 +110,42 @@ class MatchParser {
         ),
       ]);
 
+      /*
+        Duplication check
+      */
 
       // dupe check
-      const andQuery = {
-      };
+      const andQuery = [
+        {
+          date,
+        }, // it's needed because otherwise we would loss multiple matches with same team
+      ];
 
-      if (date) {
-        andQuery.date = date;
-      }
-
-      if (leagueComparatorResult === CompareResultTypes.Existing) {
-        andQuery.league = new ObjectId(leagueEntity._id);
-      }
+      let canQuery = false;
 
       if (homeTeamComparatorResult === CompareResultTypes.Existing) {
-        andQuery.homeTeam = new ObjectId(homeTeamEntity._id);
+        canQuery = true;
+        andQuery.push({
+          'homeTeam._id': new ObjectId(homeTeamEntity._id),
+        });
       }
 
       if (awayTeamComparatorResult === CompareResultTypes.Existing) {
-        andQuery.awayTeam = new ObjectId(awayTeamEntity._id);
+        canQuery = true;
+        andQuery.push({
+          'awayTeam._id': new ObjectId(awayTeamEntity._id),
+        });
       }
 
-      const similarMatch = await Match.findOne(andQuery);
+      if (canQuery) {
+        const similarMatch = await Match
+          .and(andQuery)
+          .findOne();
 
-      if (similarMatch) {
-        const debugMatch = JSON.stringify(await similarMatch.get(), null, 4);
-        console.log(`Similar match: ${debugMatch}`);
-        return ParserResultTypes.Duplicate;
+        if (similarMatch) {
+          logger.info(`Similar match with id: ${await similarMatch.get('_id')}`);
+          return ParserResultTypes.Duplicate;
+        }
       }
 
       // only save if no debug mode and similarmatch
@@ -236,14 +250,13 @@ class MatchParser {
           id: matchId,
         } = await match.save();
 
-        const debugMatch = JSON.stringify(matchId, null, 4);
-        console.log(`Unique match: ${debugMatch}`);
+        logger.info(`Unique match saved with ${matchId}`);
         return ParserResultTypes.Fresh;
       }
 
       return ParserResultTypes.Fresh;
     } catch (error) {
-      console.log(error)
+      logger.error(error);
       throw error;
     }
   }

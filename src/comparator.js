@@ -2,6 +2,9 @@ import {
   similarity,
 } from 'talisman/metrics/distance/dice';
 import levenshtein from 'talisman/metrics/distance/levenshtein';
+import {
+  initLoggerInstance,
+} from './init.js';
 
 const CompareModeTypes = {
   StrictAndSimilar: 'StrictAndSimilar',
@@ -31,6 +34,8 @@ const RelationSourceTypes = {
   Identifier: 'Identifier',
   Self: 'Self',
 };
+
+const logger = initLoggerInstance();
 
 class Comparator {
   static calculateSimilarity(stringTo, stringFrom) {
@@ -229,7 +234,7 @@ class Comparator {
         entity: entityToCompare,
       };
     } catch (error) {
-      console.log(error)
+      logger.error(error);
       return {
         mode: compareMode,
         type: CompareResultTypes.New,

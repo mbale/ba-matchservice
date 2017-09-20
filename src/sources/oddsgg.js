@@ -5,7 +5,7 @@ import ApiKeysUsedError from '../errors.js';
 dotenv.config();
 
 class OddsggSource {
-  static async getMatches(opts = {}) {
+  static async getMatches() {
     const API_KEYS = process.env.ODDSGG_API_KEYS.split(',');
     const GET_MATCHES_URL = process.env.ODDSGG_GET_MATCHES_URL;
     const GET_LEAGUES_URL = process.env.ODDSGG_GET_LEAGUES_URL;
@@ -105,19 +105,6 @@ class OddsggSource {
       type: 'oddsgg',
       matches: matchesInSchema,
     };
-
-    // const matches = data.map(({
-    //   StartTime,
-    //   TournamentId,
-    //   HomeTeamName,
-    //   awayTeamName,
-    // }) => {
-
-    // });
-
-    // console.log(matches.length)
-
-    // return matches;
   }
 }
 
