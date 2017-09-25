@@ -120,7 +120,7 @@ class PinnacleSource {
       },
     });
 
-    // pinnacle sends empty string in response if there is no content since
+    // pinnacle sends empty string in response if there is no content
     // yupp with json header
     if (data !== '') {
       const {
@@ -150,7 +150,7 @@ class PinnacleSource {
         // strip out irrelevant keywords
         gamename = PinnacleSource.findAndRemoveKeywords(gamename);
 
-        leagueWithMatch.events.forEach((match) => {
+        for (const match of leagueWithMatch.events) {
           const {
             starts: date,
           } = match;
@@ -167,14 +167,17 @@ class PinnacleSource {
           homeTeam = PinnacleSource.findAndRemoveKeywords(homeTeam);
           awayTeam = PinnacleSource.findAndRemoveKeywords(awayTeam);
 
-          matches.push({
-            homeTeam,
-            awayTeam,
-            league: leaguename,
-            game: gamename,
-            date,
-          });
-        });
+          // we never can trust anything
+          if (homeTeam !== 'undefined' && awayTeam !== 'undefined') {
+            matches.push({
+              homeTeam,
+              awayTeam,
+              league: leaguename,
+              game: gamename,
+              date,
+            });
+          }
+        }
       }
     }
 
