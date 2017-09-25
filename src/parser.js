@@ -42,6 +42,7 @@ class MatchParser {
         awayTeam: awayTeamname,
         league: leaguename,
         game: gamename,
+        _sources,
       } = matchToTry;
 
       const {
@@ -244,6 +245,7 @@ class MatchParser {
           homeTeam,
           awayTeam,
           date,
+          _sources,
         });
 
         const {

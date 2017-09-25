@@ -34,7 +34,7 @@ const setDefaultFieldsOnCreate = () => ({ model }) => next => async (action) => 
 };
 
 function extendModel() {
-  Match.use(setDefaultFieldsOnCreate);
+  //Match.use(setDefaultFieldsOnCreate);
   return Match;
 }
 

@@ -136,6 +136,10 @@ class PinnacleSource {
           name: leaguename,
         } = leagueWithMatch;
 
+        const {
+          id: leagueId,
+        } = leagueWithMatch;
+
         let gamename = null;
 
         // split into game and league
@@ -153,12 +157,19 @@ class PinnacleSource {
         for (const match of leagueWithMatch.events) {
           const {
             starts: date,
+            id: matchId,
           } = match;
 
           let {
             home: homeTeam,
             away: awayTeam,
           } = match;
+
+          const _source = {
+            type: 'pinnacle',
+            leagueId,
+            matchId,
+          };
 
           // we find (map) segment
           homeTeam = PinnacleSource.removeMapSegmentFromTeam(homeTeam, '(');
@@ -175,6 +186,7 @@ class PinnacleSource {
               league: leaguename,
               game: gamename,
               date,
+              _sources: [_source],
             });
           }
         }
@@ -186,6 +198,24 @@ class PinnacleSource {
       matches,
       lastFetchTime,
     };
+  }
+
+  static async getOdds() {
+    const API_KEY = process.env.PINNACLE_API_KEY;
+    const GET_ODDS_URL = process.env.PINNACLE_GET_ODDS_URL;
+    const SPORT_ID = process.env.PINNACLE_SPORT_ID;
+
+    const axiosInstance = axios.create();
+
+    axiosInstance.defaults.headers.common.Authorization = `Basic ${API_KEY}`;
+
+    const data = await axiosInstance.get(GET_ODDS_URL, {
+      params: {
+        sportid: SPORT_ID,
+      },
+    });
+
+    console.log(data)
   }
 }
 
