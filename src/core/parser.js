@@ -1,22 +1,18 @@
 import {
   ObjectId,
 } from 'mongorito';
-import Comparator, {
-  CompareResultTypes,
-} from './comparator.js';
+import Comparator from './comparator.js';
 import {
   initLoggerInstance,
-} from './init.js';
-import Match from './models/match.js';
-import League from './models/league.js';
-import Team from './models/team.js';
-import Game from './models/game.js';
-
-const ParserResultTypes = {
-  Fresh: 'Fresh',
-  Duplicate: 'Duplication',
-  Invalid: 'Invalid',
-};
+} from '../utils/init.js';
+import {
+  ParserResultTypes,
+  CompareResultTypes,
+} from '../utils/types.js';
+import Match from '../models/match.js';
+import League from '../models/league.js';
+import Team from '../models/team.js';
+import Game from '../models/game.js';
 
 const logger = initLoggerInstance();
 
@@ -213,37 +209,11 @@ class MatchParser {
           id: awayTeamId,
         }] = await Promise.all(entities);
 
-        const [
-          gameInDb,
-          leagueInDb,
-          homeTeamInDb,
-          awayTeamInDb,
-        ] = await Promise.all([
-          Game.findOne({
-            _id: new ObjectId(gameId),
-          }),
-          League.findOne({
-            _id: new ObjectId(leagueId),
-          }),
-          Team.findOne({
-            _id: new ObjectId(homeTeamId),
-          }),
-          Team.findOne({
-            _id: new ObjectId(awayTeamId),
-          }),
-        ]);
-
-        // assign whole instances
-        game = await gameInDb.get();
-        league = await leagueInDb.get();
-        homeTeam = await homeTeamInDb.get();
-        awayTeam = await awayTeamInDb.get();
-
         const match = new Match({
-          league,
-          game,
-          homeTeam,
-          awayTeam,
+          leagueId,
+          gameId,
+          homeTeamId,
+          awayTeamId,
           date,
           _sources,
         });
@@ -265,6 +235,3 @@ class MatchParser {
 }
 
 export default MatchParser;
-export {
-  ParserResultTypes,
-};

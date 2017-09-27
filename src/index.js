@@ -7,15 +7,22 @@ import passport from 'passport';
 import Strategy from 'passport-local';
 import cors from 'cors';
 import arena from 'bull-arena';
+import PinnacleSource from './sources/pinnacle.js';
 import {
-  initMongoDbConnection,
+  //initMongoDbConnection,
   initRedisConnection,
   initLoggerInstance,
-} from './init.js';
+} from './utils/init.js';
 import {
-  pinnacle,
-  oddsgg,
-} from './tasks/initial-match-fetching.js';
+  QueueTypes,
+} from './utils/types.js';
+import {
+  pinnacleMatchFetchingTask,
+  oddsggMatchFetchingTask,
+} from './tasks/match-fetching.js';
+import {
+  pinnacleOddsFetchingTask,
+} from './tasks/odds-updating.js';
 
 dotenv.config();
 
@@ -45,22 +52,23 @@ logger.info(`Logger's connected to ${LOGGER_MONGODB_URL}`);
 async function main() {
   try {
     const {
-      initialMatchFetching,
-      matchReferenceUpdating,
+      matchFetchingQueue,
+      oddsUpdatingQueue,
     } = await initRedisConnection();
 
     const HTTP_PORT = process.env.MATCH_SERVICE_HTTP_PORT || 4000;
     const REDIS_URL = process.env.MATCH_SERVICE_TASK_REDIS_URL;
 
-    await initMongoDbConnection();
+    await pinnacleOddsFetchingTask();
 
     /*
       Tasks
     */
 
-    // pinnacle
-    initialMatchFetching.process('pinnacle', pinnacle);
-    initialMatchFetching.process('oddsgg', oddsgg);
+    matchFetchingQueue.process('pinnacle', pinnacleMatchFetchingTask);
+    matchFetchingQueue.process('oddsgg', oddsggMatchFetchingTask);
+
+    oddsUpdatingQueue.process('pinnacle', pinnacleOddsFetchingTask);
 
     /*
       Http
@@ -92,12 +100,12 @@ async function main() {
     });
 
     const queues = [{
-      name: 'initial-match-fetching',
+      name: QueueTypes.MatchFetching,
       url: REDIS_URL,
       hostId: 'betacle',
       type: 'bull',
     }, {
-      name: 'match-reference-updating',
+      name: QueueTypes.OddsUpdating,
       url: REDIS_URL,
       hostId: 'betacle',
       type: 'bull',
@@ -138,6 +146,14 @@ async function main() {
 
     app.get('/', (request, response) => {
       response.render('login');
+    });
+
+    app.post('/api/tasks/bootstrap', bodyParser.json(), (request, response) => {
+      matchFetchingQueue.add('pinnacle', {}, {
+        repeat: {
+          cron: '0 * * * *',
+        },
+      });
     });
 
     app.post('/api/tasks/initial-match-fetching', bodyParser.json(), (request, response) => {
@@ -181,7 +197,7 @@ async function main() {
 
         logger.info('Adding new task', taskData);
 
-        initialMatchFetching.add(body.taskOpts.source, taskData, taskConfig);
+        matchFetchingQueue.add(body.taskOpts.source, taskData, taskConfig);
 
         return response
           .status(200)

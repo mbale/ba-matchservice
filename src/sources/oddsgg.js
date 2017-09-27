@@ -1,6 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
-import ApiKeysUsedError from '../errors.js';
+import ApiKeysUsedError from '../utils/errors.js';
 
 dotenv.config();
 

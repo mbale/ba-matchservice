@@ -4,36 +4,15 @@ import {
 import levenshtein from 'talisman/metrics/distance/levenshtein';
 import {
   initLoggerInstance,
-} from './init.js';
+} from '../utils/init.js';
+import {
+  CompareModeTypes,
+  CompareResultTypes,
+  CompareReasonTypes,
+  RelationTypes,
+  RelationSourceTypes,
+} from '../utils/types.js';
 
-const CompareModeTypes = {
-  StrictAndSimilar: 'StrictAndSimilar',
-  StrictOnly: 'StrictOnly', // default
-  SimilarOnly: 'SimilarOnly',
-};
-
-const CompareResultTypes = {
-  Existing: 'Existing',
-  New: 'New',
-};
-
-const CompareReasonTypes = {
-  StrictMatch: 'StrictMatch',
-  SimilarMatch: 'SimilarMatch',
-  NoRelation: 'NoRelation',
-  Fallback: 'Fallback',
-};
-
-const RelationTypes = {
-  Strict: 'Strict',
-  Similar: 'Similar',
-};
-
-const RelationSourceTypes = {
-  Keyword: 'Keyword',
-  Identifier: 'Identifier',
-  Self: 'Self',
-};
 
 const logger = initLoggerInstance();
 
@@ -247,9 +226,3 @@ class Comparator {
 }
 
 export default Comparator;
-export {
-  CompareModeTypes,
-  CompareResultTypes,
-  RelationTypes,
-  RelationSourceTypes,
-};

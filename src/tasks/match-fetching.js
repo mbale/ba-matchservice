@@ -1,36 +1,24 @@
-import {
-  CompareModeTypes,
-} from '../comparator.js';
-import MatchParser, {
-  ParserResultTypes,
-} from '../parser.js';
+import MatchParser from '../core/parser.js';
+import Cache from '../models/cache.js';
 import {
   initMongoDbConnection,
   initLoggerInstance,
-} from '../init.js';
-import Cache from '../models/cache.js';
+} from '../utils/init.js';
 import PinnacleSource from '../sources/pinnacle.js';
 import OddsggSource from '../sources/oddsgg.js';
+import {
+  getLatestCache,
+} from '../utils/helpers.js';
+import {
+  CacheTypes,
+  CacheSourceTypes,
+  CompareModeTypes,
+  ParserResultTypes,
+} from '../utils/types.js';
 
 const logger = initLoggerInstance();
 
-async function getLatestCache(source) {
-  const requests = await Cache
-    .sort('-_createdAt')
-    .find({
-      type: source,
-    });
-
-  let latestCache = null;
-
-  if (requests.length > 0) {
-    latestCache = await requests[requests.length - 1].get();
-  }
-
-  return latestCache;
-}
-
-export async function pinnacle(job) {
+export async function pinnacleMatchFetchingTask(job) {
   /*
     0.) Job options
   */
@@ -84,7 +72,7 @@ export async function pinnacle(job) {
 
   // we won't save cache in debug
   if (!parserOpts.debug) {
-    latestCache = await getLatestCache('pinnacle');
+    latestCache = await getLatestCache(CacheSourceTypes.Matches, CacheTypes.Odds);
 
     if (latestCache) {
       latestCacheTime = latestCache.time;
@@ -151,7 +139,8 @@ export async function pinnacle(job) {
 
   if (!parserOpts.debug) {
     latestCache = new Cache({
-      type: 'pinnacle',
+      type: CacheTypes.Matches,
+      source: CacheSourceTypes.Pinnacle,
       time: lastFetchTime,
     });
 
@@ -165,7 +154,7 @@ export async function pinnacle(job) {
   return JSON.stringify(results); // due to web interface we need to convert to string
 }
 
-export async function oddsgg(job) {
+export async function oddsggMatchFetchingTask(job) {
   /*
     0.) Job options
   */

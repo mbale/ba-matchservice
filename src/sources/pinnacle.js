@@ -200,7 +200,7 @@ class PinnacleSource {
     };
   }
 
-  static async getOdds() {
+  static async getOdds(since) {
     const API_KEY = process.env.PINNACLE_API_KEY;
     const GET_ODDS_URL = process.env.PINNACLE_GET_ODDS_URL;
     const SPORT_ID = process.env.PINNACLE_SPORT_ID;
@@ -209,13 +209,66 @@ class PinnacleSource {
 
     axiosInstance.defaults.headers.common.Authorization = `Basic ${API_KEY}`;
 
-    const data = await axiosInstance.get(GET_ODDS_URL, {
+    const {
+      data: {
+        last: lastFetchTime,
+        leagues,
+      },
+    } = await axiosInstance.get(GET_ODDS_URL, {
       params: {
         sportid: SPORT_ID,
+        since,
+        oddsFormat: 'decimal',
       },
     });
 
-    console.log(data)
+    const matches = [];
+
+    for (const league of leagues) {
+      league.events.forEach((event) => {
+        // TODO: Get latest
+        const matchWithMoneyline = event.periods.find(period => period.moneyline);
+        const matchWithSpreadOdds = event.periods.find(period => period.spreads);
+        const matchWithTotalOdds = event.periods.find(period => period.totals);
+
+        const matchId = event.id;
+        const leagueId = league.id;
+
+        let eligibleToSend = null;
+
+        const match = {
+          id: matchId,
+          leagueId,
+          odds: {},
+        };
+
+        // gather all odds data
+        if (matchWithMoneyline) {
+          match.odds.moneyline = matchWithMoneyline.moneyline;
+          eligibleToSend = true;
+        }
+
+        if (matchWithSpreadOdds) {
+          match.odds.spread = matchWithSpreadOdds.spreads;
+          eligibleToSend = true;
+        }
+
+        if (matchWithTotalOdds) {
+          match.odds.total = matchWithTotalOdds.totals[0];
+          eligibleToSend = true;
+        }
+
+        if (eligibleToSend) {
+          matches.push(match);
+        }
+      });
+    }
+
+    return {
+      type: 'pinnacle',
+      matches,
+      lastFetchTime,
+    };
   }
 }
 
