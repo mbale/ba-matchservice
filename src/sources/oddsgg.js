@@ -81,7 +81,14 @@ class OddsggSource {
     const matchesInSchema = [];
 
     for (const match of matches) {
-      const matchInSchema = {};
+      const matchInSchema = {
+        _source: {
+          type: 'oddsgg',
+          leagueId: match.TournamentId,
+          matchId: match.Id,
+          fetchedAt: new Date(),
+        },
+      };
       // 1.) get game type (from tournament and league)
       // worst schema structure i've ever seen so we rebuild it
       for (const league of leagues) {
@@ -104,6 +111,7 @@ class OddsggSource {
     return {
       type: 'oddsgg',
       matches: matchesInSchema,
+      lastFetchTime: new Date(),
     };
   }
 }

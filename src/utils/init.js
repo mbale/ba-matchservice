@@ -45,14 +45,14 @@ export async function initRedisConnection() {
   const REDIS_URL = process.env.MATCH_SERVICE_TASK_REDIS_URL;
 
   const matchFetchingQueue = new Queue('match-fetching', REDIS_URL);
-  const matchReferenceUpdatingQueue = new Queue('match-reference-updating', REDIS_URL);
+  const scoreUpdatingQueue = new Queue('score-updating', REDIS_URL);
   const oddsUpdatingQueue = new Queue('odds-updating', REDIS_URL);
 
   logger.info(`Redis's connected to ${REDIS_URL}`);
 
   return {
     matchFetchingQueue,
-    matchReferenceUpdatingQueue,
+    scoreUpdatingQueue,
     oddsUpdatingQueue,
   };
 }

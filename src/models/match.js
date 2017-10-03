@@ -21,9 +21,19 @@ const setDefaultFieldsOnCreate = () => ({ model }) => next => async (action) => 
     } = action;
 
     if (type === CREATE) {
-      if (typeof fields.keywords === 'undefined') {
-        fields.keywords = [];
-        model.set('keywords', []);
+      if (typeof fields.odds === 'undefined') {
+        fields.odds = [];
+        model.set('odds', []);
+      }
+
+      if (typeof fields._sources === 'undefined') {
+        fields._sources = [];
+        model.set('_sources', []);
+      }
+
+      if (typeof fields.periods === 'undefined') {
+        fields.periods = [];
+        model.set('periods', []);
       }
     }
 
@@ -34,7 +44,7 @@ const setDefaultFieldsOnCreate = () => ({ model }) => next => async (action) => 
 };
 
 function extendModel() {
-  //Match.use(setDefaultFieldsOnCreate);
+  Match.use(setDefaultFieldsOnCreate);
   return Match;
 }
 

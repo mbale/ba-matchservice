@@ -16,15 +16,18 @@ import {
   ParserResultTypes,
 } from '../utils/types.js';
 
-const logger = initLoggerInstance();
-
 export async function pinnacleMatchFetchingTask(job) {
   /*
-    0.) Job options
+    Init
   */
-  // default ones
+
+  const logger = initLoggerInstance();
+  await initMongoDbConnection();
+
+  logger.info('Initiating match fetching from pinnacle');
+
   let {
-    data: parserOpts,
+    data: parserOpts = {},
   } = job;
 
   if (Object.keys(parserOpts).length === 0) {
@@ -51,7 +54,7 @@ export async function pinnacleMatchFetchingTask(job) {
         },
       },
       game: {
-        mode: CompareModeTypes.StrictAndSimilar,
+        mode: CompareModeTypes.StrictOnly,
         thresholds: {
           dice: 0.8,
           levenshtein: 2,
@@ -61,26 +64,21 @@ export async function pinnacleMatchFetchingTask(job) {
     };
   }
 
-  await initMongoDbConnection();
-
   /*
-    1.) Get latest cache if any
+    Cache
   */
 
   let latestCacheTime = null;
   let latestCache = null;
 
-  // we won't save cache in debug
-  if (!parserOpts.debug) {
-    latestCache = await getLatestCache(CacheSourceTypes.Matches, CacheTypes.Odds);
+  latestCache = await getLatestCache(CacheSourceTypes.Matches, CacheTypes.Odds);
 
-    if (latestCache) {
-      latestCacheTime = latestCache.time;
-    }
+  if (latestCache) {
+    latestCacheTime = latestCache.time;
   }
 
   /*
-    2.) Get matches
+    Matches
   */
 
   const {
@@ -88,14 +86,8 @@ export async function pinnacleMatchFetchingTask(job) {
     lastFetchTime,
   } = await PinnacleSource.getMatches(latestCacheTime);
 
-  /*
-    3.) Match parsing
-  */
-
   // pass runtime config for parsing process
-  const matchParser = new MatchParser({
-    debug: parserOpts.debug,
-  });
+  const matchParser = new MatchParser();
 
   const results = {
     duplicateCount: 0,
@@ -134,33 +126,32 @@ export async function pinnacleMatchFetchingTask(job) {
   }
 
   /*
-    4.) Cache updating
+    Cache updating
   */
 
-  if (!parserOpts.debug) {
-    latestCache = new Cache({
-      type: CacheTypes.Matches,
-      source: CacheSourceTypes.Pinnacle,
-      time: lastFetchTime,
-    });
+  latestCache = new Cache({
+    type: CacheTypes.Matches,
+    source: CacheSourceTypes.Pinnacle,
+    time: lastFetchTime,
+  });
 
-    latestCache = await latestCache.save();
-  }
-
-  /*
-    5.) Results
-  */
+  latestCache = await latestCache.save();
 
   return JSON.stringify(results); // due to web interface we need to convert to string
 }
 
 export async function oddsggMatchFetchingTask(job) {
   /*
-    0.) Job options
+    Init
   */
 
+  const logger = initLoggerInstance();
+  await initMongoDbConnection();
+
+  logger.info('Initiating match fetching from oddsgg');
+
   let {
-    data: parserOpts,
+    data: parserOpts = {},
   } = job;
 
   if (Object.keys(parserOpts).length === 0) {
@@ -187,7 +178,7 @@ export async function oddsggMatchFetchingTask(job) {
         },
       },
       game: {
-        mode: CompareModeTypes.StrictAndSimilar,
+        mode: CompareModeTypes.StrictOnly,
         thresholds: {
           dice: 0.8,
           levenshtein: 2,
@@ -197,10 +188,8 @@ export async function oddsggMatchFetchingTask(job) {
     };
   }
 
-  await initMongoDbConnection();
-
   /*
-    1.) Get matches
+    Matches
   */
 
   const {
@@ -208,9 +197,7 @@ export async function oddsggMatchFetchingTask(job) {
   } = await OddsggSource.getMatches();
 
   // pass runtime config for parsing process
-  const matchParser = new MatchParser({
-    debug: parserOpts.debug,
-  });
+  const matchParser = new MatchParser();
 
   const results = {
     duplicateCount: 0,
@@ -247,10 +234,6 @@ export async function oddsggMatchFetchingTask(job) {
     progressCount = Math.ceil(currentProgress * 10) / 10;
     logger.info(`Task progress: ${progressCount}%`);
   }
-
-  /*
-    4.) Results
-  */
 
   return JSON.stringify(results); // due to web interface we need to convert to string
 }

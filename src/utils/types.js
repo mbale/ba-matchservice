@@ -1,6 +1,33 @@
+export const PinnaclePeriodNumberTypes = {
+  Match: 'Match',
+  Map1: 'Map1',
+  Map2: 'Map2',
+  Map3: 'Map3',
+  Map4: 'Map4',
+  Map5: 'Map5',
+  Map6: 'Map6',
+  Map7: 'Map7',
+  Unknown: 'Unknown',
+};
+
+export const PinnaclePeriodStatusTypes = {
+  Settled: 'Settled',
+  ReSettled: 'ReSettled',
+  Canceled: 'Canceled',
+  ReSettleCancelled: 'ReSettleCancelled',
+  Deleted: 'Deleted',
+  Unknown: 'Unknown',
+};
+
+export const MatchSourceTypes = {
+  Pinnacle: 'Pinnacle',
+  Oddsgg: 'Oddsgg',
+};
+
 export const QueueTypes = {
   MatchFetching: 'match-fetching',
   OddsUpdating: 'odds-updating',
+  ScoreUpdating: 'score-updating',
 };
 
 export const BetTypes = {

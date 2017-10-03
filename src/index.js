@@ -7,9 +7,7 @@ import passport from 'passport';
 import Strategy from 'passport-local';
 import cors from 'cors';
 import arena from 'bull-arena';
-import PinnacleSource from './sources/pinnacle.js';
 import {
-  //initMongoDbConnection,
   initRedisConnection,
   initLoggerInstance,
 } from './utils/init.js';
@@ -21,45 +19,38 @@ import {
   oddsggMatchFetchingTask,
 } from './tasks/match-fetching.js';
 import {
+  pinnacleScoreUpdatingTask,
+} from './tasks/score-updating.js';
+import {
   pinnacleOddsFetchingTask,
 } from './tasks/odds-updating.js';
 
 dotenv.config();
 
 /*
-  Supported sources
-  We use it to validate during task making through rest api
-*/
-
-const supportedSources = [
-  'pinnacle',
-  'oddsgg',
-];
-
-/*
-  Logger
-*/
-const LOGGER_MONGODB_URL = process.env.MATCH_SERVICE_LOGGER_MONGODB_URL;
-
-const logger = initLoggerInstance();
-
-logger.info(`Logger's connected to ${LOGGER_MONGODB_URL}`);
-
-/*
   Entry
 */
 
 async function main() {
+  /*
+    Logger
+  */
+
+  const LOGGER_MONGODB_URL = process.env.MATCH_SERVICE_LOGGER_MONGODB_URL;
+
+  const logger = initLoggerInstance();
+
+  logger.info(`Logger's connected to ${LOGGER_MONGODB_URL}`);
+
   try {
     const {
       matchFetchingQueue,
+      scoreUpdatingQueue,
       oddsUpdatingQueue,
     } = await initRedisConnection();
 
     const HTTP_PORT = process.env.MATCH_SERVICE_HTTP_PORT || 4000;
     const REDIS_URL = process.env.MATCH_SERVICE_TASK_REDIS_URL;
-
-    await pinnacleOddsFetchingTask();
 
     /*
       Tasks
@@ -67,7 +58,7 @@ async function main() {
 
     matchFetchingQueue.process('pinnacle', pinnacleMatchFetchingTask);
     matchFetchingQueue.process('oddsgg', oddsggMatchFetchingTask);
-
+    scoreUpdatingQueue.process('pinnacle', pinnacleScoreUpdatingTask);
     oddsUpdatingQueue.process('pinnacle', pinnacleOddsFetchingTask);
 
     /*
@@ -106,6 +97,11 @@ async function main() {
       type: 'bull',
     }, {
       name: QueueTypes.OddsUpdating,
+      url: REDIS_URL,
+      hostId: 'betacle',
+      type: 'bull',
+    }, {
+      name: QueueTypes.ScoreUpdating,
       url: REDIS_URL,
       hostId: 'betacle',
       type: 'bull',
@@ -149,67 +145,33 @@ async function main() {
     });
 
     app.post('/api/tasks/bootstrap', bodyParser.json(), (request, response) => {
-      matchFetchingQueue.add('pinnacle', {}, {
+      oddsUpdatingQueue.add('pinnacle', {}, {
         repeat: {
-          cron: '0 * * * *',
+          cron: '*/5 * * * *', // every 4th hour
         },
       });
+
+      matchFetchingQueue.add('odds', {}, {
+        repeat: {
+          cron: '* */7 * * *', // every 6th hour
+        },
+      });
+
+      matchFetchingQueue.add('pinnacle', {}, {
+        repeat: {
+          cron: '* */5 * * *', // every 6th hour
+        },
+      });
+
+      scoreUpdatingQueue.add('pinnacle', {}, {
+        repeat: {
+          cron: '*/5 * * * *', // every 6th hour
+        },
+      });
+      return response
+        .status(200)
+        .send('OK');
     });
-
-    app.post('/api/tasks/initial-match-fetching', bodyParser.json(), (request, response) => {
-      try {
-        const {
-          body,
-        } = request;
-
-        if (!body || Object.keys(body).length === 0) {
-          return response
-            .status(400)
-            .send('Empty or bad POST data.');
-        }
-
-        if (!body.taskOpts) {
-          return response
-            .status(400)
-            .send('Missing "taskOpts" key.');
-        }
-
-        if (!body.taskOpts.source ||
-          !supportedSources.includes(body.taskOpts.source)) {
-          return response
-            .status(400)
-            .send('Missing or invalid source');
-        }
-
-        if (!body.taskOpts.cron) {
-          return response
-              .status(400)
-              .send('Missing cron.');
-        }
-
-        const taskConfig = {
-          repeat: {
-            cron: body.taskOpts.cron,
-          },
-        };
-
-        const taskData = body.parserOpts;
-
-        logger.info('Adding new task', taskData);
-
-        matchFetchingQueue.add(body.taskOpts.source, taskData, taskConfig);
-
-        return response
-          .status(200)
-          .send('OK');
-      } catch (error) {
-        logger.error(error);
-        return response
-          .status(500)
-          .send('We fucked up something');
-      }
-    });
-
 
     app.use((req, res, next) => {
       const isLoggedIn = req.isAuthenticated();

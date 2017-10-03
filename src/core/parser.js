@@ -38,7 +38,7 @@ class MatchParser {
         awayTeam: awayTeamname,
         league: leaguename,
         game: gamename,
-        _sources,
+        _source,
       } = matchToTry;
 
       const {
@@ -123,14 +123,14 @@ class MatchParser {
       if (homeTeamComparatorResult === CompareResultTypes.Existing) {
         canQuery = true;
         andQuery.push({
-          'homeTeam._id': new ObjectId(homeTeamEntity._id),
+          homeTeamId: new ObjectId(homeTeamEntity._id),
         });
       }
 
       if (awayTeamComparatorResult === CompareResultTypes.Existing) {
         canQuery = true;
         andQuery.push({
-          'awayTeam._id': new ObjectId(awayTeamEntity._id),
+          awayTeamId: new ObjectId(awayTeamEntity._id),
         });
       }
 
@@ -215,7 +215,9 @@ class MatchParser {
           homeTeamId,
           awayTeamId,
           date,
-          _sources,
+          _sources: [
+            _source,
+          ],
         });
 
         const {

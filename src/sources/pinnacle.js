@@ -165,12 +165,6 @@ class PinnacleSource {
             away: awayTeam,
           } = match;
 
-          const _source = {
-            type: 'pinnacle',
-            leagueId,
-            matchId,
-          };
-
           // we find (map) segment
           homeTeam = PinnacleSource.removeMapSegmentFromTeam(homeTeam, '(');
           awayTeam = PinnacleSource.removeMapSegmentFromTeam(awayTeam, '(');
@@ -186,7 +180,12 @@ class PinnacleSource {
               league: leaguename,
               game: gamename,
               date,
-              _sources: [_source],
+              _source: {
+                type: 'pinnacle',
+                leagueId,
+                matchId,
+                fetchedAt: new Date(),
+              },
             });
           }
         }
@@ -262,6 +261,47 @@ class PinnacleSource {
           matches.push(match);
         }
       });
+    }
+
+    return {
+      type: 'pinnacle',
+      matches,
+      lastFetchTime,
+    };
+  }
+
+  static async getScores(since) {
+    const API_KEY = process.env.PINNACLE_API_KEY;
+    const GET_SCORES_URL = process.env.PINNACLE_GET_SCORES_URL;
+    const SPORT_ID = process.env.PINNACLE_SPORT_ID;
+
+    const axiosInstance = axios.create();
+
+    axiosInstance.defaults.headers.common.Authorization = `Basic ${API_KEY}`;
+
+    const {
+      data: {
+        last: lastFetchTime,
+        leagues,
+      },
+    } = await axiosInstance.get(GET_SCORES_URL, {
+      params: {
+        sportid: SPORT_ID,
+        since,
+      },
+    });
+
+    const matches = [];
+
+    for (const { events, id: leagueId } of leagues) {
+      for (const { id: matchId, periods } of events) {
+        const match = {
+          matchId,
+          leagueId,
+          periods,
+        };
+        matches.push(match);
+      }
     }
 
     return {
