@@ -143,7 +143,7 @@ export async function fetchMatchesFromPinnacle(job) {
   return JSON.stringify(results); // due to web interface we need to convert to string
 }
 
-export async function oddsggMatchFetchingTask(job) {
+export async function fetchMatchesFromOddsgg(job) {
   /*
     Init
   */

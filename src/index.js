@@ -16,7 +16,7 @@ import {
 } from './utils/types.js';
 import {
   fetchMatchesFromPinnacle,
-  oddsggMatchFetchingTask,
+  fetchMatchesFromOddsgg,
 } from './tasks/fetch-matches.js';
 import {
   fetchMatchUpdatesFromPinnacle,
@@ -57,13 +57,11 @@ async function main() {
     */
 
     matchFetchingQueue.process('pinnacle', fetchMatchesFromPinnacle);
-    matchFetchingQueue.process('oddsgg', oddsggMatchFetchingTask);
+    matchFetchingQueue.process('oddsgg', fetchMatchesFromOddsgg);
     matchUpdatesFetchingQueue.process('pinnacle', fetchMatchUpdatesFromPinnacle);
     matchOddsFetchingQueue.process('pinnacle', fetchMatchOddsFromPinnacle);
 
     const job = { progress() {} };
-
-    await fetchMatchOddsFromPinnacle(job);
 
     /*
       Http
