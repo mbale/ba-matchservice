@@ -151,13 +151,13 @@ async function main() {
     app.post('/api/tasks/bootstrap', bodyParser.json(), (request, response) => {
       matchFetchingQueue.add(MatchSourceTypes.Pinnacle, {}, {
         repeat: {
-          cron: '0 * * * *', // every hour
+          cron: '0 * * * *', // every hour 0 minutes
         },
       });
 
       matchFetchingQueue.add(MatchSourceTypes.Oddsgg, {}, {
         repeat: {
-          cron: '* * * * *', // every hour
+          cron: '15 * * * *', // every hour 15 minutes
         },
       });
 
