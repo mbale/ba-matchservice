@@ -149,29 +149,30 @@ async function main() {
     });
 
     app.post('/api/tasks/bootstrap', bodyParser.json(), (request, response) => {
-      // oddsFetchingQueue.add('pinnacle', {}, {
-      //   repeat: {
-      //     cron: '*/2 * * * *', // every 5th minute
-      //   },
-      // });
-
-      // matchFetchingQueue.add('odds', {}, {
-      //   repeat: {
-      //     cron: '* */7 * * *', // every 6th hour
-      //   },
-      // });
-
       matchFetchingQueue.add('pinnacle', {}, {
         repeat: {
-          cron: '* */5 * * *', // every 6th hour
+          cron: '0 * * * *', // every hour
         },
       });
 
-      // scoreUpdatingQueue.add('pinnacle', {}, {
-      //   repeat: {
-      //     cron: '*/5 * * * *', // every 6th hour
-      //   },
-      // });
+      matchFetchingQueue.add('odds', {}, {
+        repeat: {
+          cron: '0 * * * *', // every hour
+        },
+      });
+
+      matchUpdatesFetchingQueue.add('pinnacle', {}, {
+        repeat: {
+          cron: '0 */2 * * *', // every two hours
+        },
+      });
+
+      matchOddsFetchingQueue.add('pinnacle', {}, {
+        repeat: {
+          cron: '0 */2 * * *', // every two hours
+        },
+      });
+
       return response
         .status(200)
         .send('OK');
