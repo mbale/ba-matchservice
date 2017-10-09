@@ -155,19 +155,19 @@ async function main() {
 
       matchFetchingQueue.add('odds', {}, {
         repeat: {
-          cron: '0 * * * *', // every hour
+          cron: '15 * * * *', // every hour
         },
       });
 
       matchUpdatesFetchingQueue.add('pinnacle', {}, {
         repeat: {
-          cron: '0 */2 * * *', // every two hours
+          cron: '15 */2 * * *', // every two hours
         },
       });
 
       matchOddsFetchingQueue.add('pinnacle', {}, {
         repeat: {
-          cron: '0 */2 * * *', // every two hours
+          cron: '30 */2 * * *', // every two hours
         },
       });
 
