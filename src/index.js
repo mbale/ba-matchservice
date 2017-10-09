@@ -13,6 +13,8 @@ import {
 } from './utils/init.js';
 import {
   QueueTypes,
+  MatchSourceTypes,
+  OddsSourceTypes,
 } from './utils/types.js';
 import {
   fetchMatchesFromPinnacle,
@@ -56,10 +58,10 @@ async function main() {
       Tasks
     */
 
-    matchFetchingQueue.process('pinnacle', fetchMatchesFromPinnacle);
-    matchFetchingQueue.process('oddsgg', fetchMatchesFromOddsgg);
-    matchUpdatesFetchingQueue.process('pinnacle', fetchMatchUpdatesFromPinnacle);
-    matchOddsFetchingQueue.process('pinnacle', fetchMatchOddsFromPinnacle);
+    matchFetchingQueue.process(MatchSourceTypes.Pinnacle, fetchMatchesFromPinnacle);
+    matchFetchingQueue.process(MatchSourceTypes.Oddsgg, fetchMatchesFromOddsgg);
+    matchUpdatesFetchingQueue.process(MatchSourceTypes.Pinnacle, fetchMatchUpdatesFromPinnacle);
+    matchOddsFetchingQueue.process(MatchSourceTypes.Pinnacle, fetchMatchOddsFromPinnacle);
 
     const job = { progress() {} };
 
@@ -147,25 +149,25 @@ async function main() {
     });
 
     app.post('/api/tasks/bootstrap', bodyParser.json(), (request, response) => {
-      matchFetchingQueue.add('pinnacle', {}, {
+      matchFetchingQueue.add(MatchSourceTypes.Pinnacle, {}, {
         repeat: {
           cron: '0 * * * *', // every hour
         },
       });
 
-      matchFetchingQueue.add('odds', {}, {
+      matchFetchingQueue.add(MatchSourceTypes.Oddsgg, {}, {
         repeat: {
-          cron: '15 * * * *', // every hour
+          cron: '* * * * *', // every hour
         },
       });
 
-      matchUpdatesFetchingQueue.add('pinnacle', {}, {
+      matchUpdatesFetchingQueue.add(MatchSourceTypes.Pinnacle, {}, {
         repeat: {
           cron: '15 */2 * * *', // every two hours
         },
       });
 
-      matchOddsFetchingQueue.add('pinnacle', {}, {
+      matchOddsFetchingQueue.add(MatchSourceTypes.Pinnacle, {}, {
         repeat: {
           cron: '30 */2 * * *', // every two hours
         },
