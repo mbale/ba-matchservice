@@ -15,15 +15,15 @@ import {
   QueueTypes,
 } from './utils/types.js';
 import {
-  pinnacleMatchFetchingTask,
+  fetchMatchesFromPinnacle,
   oddsggMatchFetchingTask,
-} from './tasks/match-fetching.js';
+} from './tasks/fetch-matches.js';
 import {
-  pinnacleScoreUpdatingTask,
-} from './tasks/score-updating.js';
+  fetchMatchUpdatesFromPinnacle,
+} from './tasks/fetch-match-updates.js';
 import {
-  pinnacleOddsFetchingTask,
-} from './tasks/odds-updating.js';
+  fetchMatchOddsFromPinnacle,
+} from './tasks/fetch-match-odds.js';
 
 dotenv.config();
 
@@ -45,8 +45,8 @@ async function main() {
   try {
     const {
       matchFetchingQueue,
-      scoreUpdatingQueue,
-      oddsUpdatingQueue,
+      matchUpdatesFetchingQueue,
+      matchOddsFetchingQueue,
     } = await initRedisConnection();
 
     const HTTP_PORT = process.env.MATCH_SERVICE_HTTP_PORT || 4000;
@@ -56,10 +56,14 @@ async function main() {
       Tasks
     */
 
-    matchFetchingQueue.process('pinnacle', pinnacleMatchFetchingTask);
+    matchFetchingQueue.process('pinnacle', fetchMatchesFromPinnacle);
     matchFetchingQueue.process('oddsgg', oddsggMatchFetchingTask);
-    scoreUpdatingQueue.process('pinnacle', pinnacleScoreUpdatingTask);
-    oddsUpdatingQueue.process('pinnacle', pinnacleOddsFetchingTask);
+    matchUpdatesFetchingQueue.process('pinnacle', fetchMatchUpdatesFromPinnacle);
+    matchOddsFetchingQueue.process('pinnacle', fetchMatchOddsFromPinnacle);
+
+    const job = { progress() {} };
+
+    await fetchMatchOddsFromPinnacle(job);
 
     /*
       Http
@@ -96,12 +100,12 @@ async function main() {
       hostId: 'betacle',
       type: 'bull',
     }, {
-      name: QueueTypes.OddsUpdating,
+      name: QueueTypes.MatchOddsFetching,
       url: REDIS_URL,
       hostId: 'betacle',
       type: 'bull',
     }, {
-      name: QueueTypes.ScoreUpdating,
+      name: QueueTypes.MatchUpdatesFetching,
       url: REDIS_URL,
       hostId: 'betacle',
       type: 'bull',
@@ -145,17 +149,17 @@ async function main() {
     });
 
     app.post('/api/tasks/bootstrap', bodyParser.json(), (request, response) => {
-      oddsUpdatingQueue.add('pinnacle', {}, {
-        repeat: {
-          cron: '*/5 * * * *', // every 4th hour
-        },
-      });
+      // oddsFetchingQueue.add('pinnacle', {}, {
+      //   repeat: {
+      //     cron: '*/2 * * * *', // every 5th minute
+      //   },
+      // });
 
-      matchFetchingQueue.add('odds', {}, {
-        repeat: {
-          cron: '* */7 * * *', // every 6th hour
-        },
-      });
+      // matchFetchingQueue.add('odds', {}, {
+      //   repeat: {
+      //     cron: '* */7 * * *', // every 6th hour
+      //   },
+      // });
 
       matchFetchingQueue.add('pinnacle', {}, {
         repeat: {
@@ -163,11 +167,11 @@ async function main() {
         },
       });
 
-      scoreUpdatingQueue.add('pinnacle', {}, {
-        repeat: {
-          cron: '*/5 * * * *', // every 6th hour
-        },
-      });
+      // scoreUpdatingQueue.add('pinnacle', {}, {
+      //   repeat: {
+      //     cron: '*/5 * * * *', // every 6th hour
+      //   },
+      // });
       return response
         .status(200)
         .send('OK');

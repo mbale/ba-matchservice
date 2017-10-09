@@ -8,6 +8,11 @@ import winston from 'winston';
 import {
   MongoDB,
 } from 'winston-mongodb'; // autoinject
+import {
+  QueueTypes,
+} from '../utils/types.js';
+// models
+import Odds from '../models/odds.js';
 import Cache from '../models/cache.js';
 import Match from '../models/match.js';
 import League from '../models/league.js';
@@ -44,16 +49,16 @@ const logger = initLoggerInstance();
 export async function initRedisConnection() {
   const REDIS_URL = process.env.MATCH_SERVICE_TASK_REDIS_URL;
 
-  const matchFetchingQueue = new Queue('match-fetching', REDIS_URL);
-  const scoreUpdatingQueue = new Queue('score-updating', REDIS_URL);
-  const oddsUpdatingQueue = new Queue('odds-updating', REDIS_URL);
+  const matchFetchingQueue = new Queue(QueueTypes.MatchFetching, REDIS_URL);
+  const matchUpdatesFetchingQueue = new Queue(QueueTypes.MatchUpdatesFetching, REDIS_URL);
+  const matchOddsFetchingQueue = new Queue(QueueTypes.MatchOddsFetching, REDIS_URL);
 
   logger.info(`Redis's connected to ${REDIS_URL}`);
 
   return {
     matchFetchingQueue,
-    scoreUpdatingQueue,
-    oddsUpdatingQueue,
+    matchUpdatesFetchingQueue,
+    matchOddsFetchingQueue,
   };
 }
 
@@ -77,7 +82,8 @@ export async function initMongoDbConnection() {
     createdAt: '_createdAt',
     updatedAt: '_updatedAt',
   }));
-  // registering model
+  // registering models
+  db.register(Odds);
   db.register(Cache);
   db.register(Game);
   db.register(Match);

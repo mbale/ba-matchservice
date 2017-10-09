@@ -22,8 +22,16 @@ const setDefaultFieldsOnCreate = () => ({ model }) => next => async (action) => 
 
     if (type === CREATE) {
       if (typeof fields.odds === 'undefined') {
-        fields.odds = [];
-        model.set('odds', []);
+        fields.odds = {
+          moneyLine: [],
+          total: [],
+          spread: [],
+        };
+        model.set('odds', {
+          moneyLine: [],
+          total: [],
+          spread: [],
+        });
       }
 
       if (typeof fields._sources === 'undefined') {
@@ -32,8 +40,8 @@ const setDefaultFieldsOnCreate = () => ({ model }) => next => async (action) => 
       }
 
       if (typeof fields.periods === 'undefined') {
-        fields.periods = [];
-        model.set('periods', []);
+        fields.updates = [];
+        model.set('updates', []);
       }
     }
 

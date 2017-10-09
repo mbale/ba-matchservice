@@ -1094,9 +1094,9 @@ bull@^3.0.0-rc.2:
     semver "^5.4.1"
     uuid "^3.1.0"
 
-bull@^3.1.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/bull/-/bull-3.1.0.tgz#5cdf4ee8b9b72c17c5b257d745f62479c40ca016"
+bull@^3.2.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/bull/-/bull-3.2.0.tgz#4fd186c4dba46ceb1743108042abe4013a3dd036"
   dependencies:
     bluebird "^3.5.0"
     cron-parser "^2.4.1"

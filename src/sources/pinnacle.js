@@ -270,7 +270,7 @@ class PinnacleSource {
     };
   }
 
-  static async getScores(since) {
+  static async getPeriods(since) {
     const API_KEY = process.env.PINNACLE_API_KEY;
     const GET_SCORES_URL = process.env.PINNACLE_GET_SCORES_URL;
     const SPORT_ID = process.env.PINNACLE_SPORT_ID;
@@ -282,7 +282,7 @@ class PinnacleSource {
     const {
       data: {
         last: lastFetchTime,
-        leagues,
+        leagues = [],
       },
     } = await axiosInstance.get(GET_SCORES_URL, {
       params: {
@@ -293,14 +293,16 @@ class PinnacleSource {
 
     const matches = [];
 
-    for (const { events, id: leagueId } of leagues) {
-      for (const { id: matchId, periods } of events) {
-        const match = {
-          matchId,
-          leagueId,
-          periods,
-        };
-        matches.push(match);
+    if (leagues.length !== 0) {
+      for (const { events, id: leagueId } of leagues) {
+        for (const { id: matchId, periods } of events) {
+          const match = {
+            matchId,
+            leagueId,
+            periods,
+          };
+          matches.push(match);
+        }
       }
     }
 

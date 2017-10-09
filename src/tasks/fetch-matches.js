@@ -16,7 +16,7 @@ import {
   ParserResultTypes,
 } from '../utils/types.js';
 
-export async function pinnacleMatchFetchingTask(job) {
+export async function fetchMatchesFromPinnacle(job) {
   /*
     Init
   */
@@ -71,7 +71,7 @@ export async function pinnacleMatchFetchingTask(job) {
   let latestCacheTime = null;
   let latestCache = null;
 
-  latestCache = await getLatestCache(CacheSourceTypes.Matches, CacheTypes.Odds);
+  latestCache = await getLatestCache(CacheTypes.Matches, CacheSourceTypes.Pinnacle);
 
   if (latestCache) {
     latestCacheTime = latestCache.time;
@@ -99,6 +99,7 @@ export async function pinnacleMatchFetchingTask(job) {
   let progressCount = 0;
 
   for (const match of matches) {
+    logger.info(match);
     const result = await matchParser.analyze(match, parserOpts);
 
     switch (result) {
@@ -136,6 +137,8 @@ export async function pinnacleMatchFetchingTask(job) {
   });
 
   latestCache = await latestCache.save();
+
+  logger.info(`Task results: ${JSON.stringify(results)}`);
 
   return JSON.stringify(results); // due to web interface we need to convert to string
 }

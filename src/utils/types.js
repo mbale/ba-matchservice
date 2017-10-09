@@ -20,14 +20,22 @@ export const PinnaclePeriodStatusTypes = {
 };
 
 export const MatchSourceTypes = {
-  Pinnacle: 'Pinnacle',
-  Oddsgg: 'Oddsgg',
+  Pinnacle: 'pinnacle',
+  Oddsgg: 'oddsgg',
+};
+
+export const OddsSourceTypes = {
+  Pinnacle: 'pinnacle',
+};
+
+export const PeriodSourceTypes = {
+  Pinnacle: 'pinnacle',
 };
 
 export const QueueTypes = {
-  MatchFetching: 'match-fetching',
-  OddsUpdating: 'odds-updating',
-  ScoreUpdating: 'score-updating',
+  MatchFetching: 'fetch-matches',
+  MatchOddsFetching: 'fetch-match-odds',
+  MatchUpdatesFetching: 'fetch-match-updates',
 };
 
 export const BetTypes = {
@@ -37,12 +45,13 @@ export const BetTypes = {
 };
 
 export const CacheTypes = {
-  Odds: 'Odds',
-  Matches: 'Matches',
+  Odds: 'odds',
+  Matches: 'matches',
+  MatchUpdates: 'match-updates',
 };
 
 export const CacheSourceTypes = {
-  Pinnacle: 'Pinnacle',
+  Pinnacle: 'pinnacle',
 };
 
 export const CompareModeTypes = {

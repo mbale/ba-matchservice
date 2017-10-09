@@ -158,6 +158,9 @@ class MatchParser {
         if (gameComparatorResult === CompareResultTypes.New) {
           game = new Game({
             name: gameEntity,
+            _sources: [
+              _source,
+            ],
           });
           entities.push(game.save());
         } else {
@@ -169,6 +172,9 @@ class MatchParser {
         if (leagueComparatorResult === CompareResultTypes.New) {
           league = new League({
             name: leagueEntity,
+            _sources: [
+              _source,
+            ],
           });
           entities.push(league.save());
         } else {
@@ -180,6 +186,9 @@ class MatchParser {
         if (homeTeamComparatorResult === CompareResultTypes.New) {
           homeTeam = new Team({
             name: homeTeamEntity,
+            _sources: [
+              _source,
+            ],
           });
           entities.push(homeTeam.save());
         } else {
@@ -191,6 +200,9 @@ class MatchParser {
         if (awayTeamComparatorResult === CompareResultTypes.New) {
           awayTeam = new Team({
             name: awayTeamEntity,
+            _sources: [
+              _source,
+            ],
           });
           entities.push(awayTeam.save());
         } else {
