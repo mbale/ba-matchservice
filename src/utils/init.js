@@ -12,7 +12,6 @@ import {
   QueueTypes,
 } from '../utils/types.js';
 // models
-import Odds from '../models/odds.js';
 import Cache from '../models/cache.js';
 import Match from '../models/match.js';
 import League from '../models/league.js';
@@ -83,7 +82,6 @@ export async function initMongoDbConnection() {
     updatedAt: '_updatedAt',
   }));
   // registering models
-  db.register(Odds);
   db.register(Cache);
   db.register(Game);
   db.register(Match);
