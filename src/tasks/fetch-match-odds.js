@@ -85,8 +85,8 @@ export async function fetchMatchOddsFromPinnacle(job) {
 
         // moneyline check
         const sameMoneyline = oddsInDb.moneyLine.find(m =>
-          m.hometeam === moneyline.hometeam
-          && m.awayteam === moneyline.awayteam);
+          m.home === moneyline.home
+          && m.away === moneyline.away);
 
         if (sameMoneyline) {
           throw new OddsDuplicationError(matchIdInDb, BetTypes.Moneyline, moneyline, oddsInDb);
