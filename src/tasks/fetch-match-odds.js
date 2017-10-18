@@ -1,3 +1,6 @@
+import {
+  ObjectId,
+} from 'mongorito';
 import PinnacleSource from '../sources/pinnacle.js';
 import Match from '../models/match.js';
 import Cache from '../models/cache.js';
@@ -92,6 +95,8 @@ export async function fetchMatchOddsFromPinnacle(job) {
           throw new OddsDuplicationError(matchIdInDb, BetTypes.Moneyline, moneyline, oddsInDb);
         }
 
+        // add id
+        moneyline._id = new ObjectId();
         // add fetch date
         moneyline.fetchedAt = new Date();
 
