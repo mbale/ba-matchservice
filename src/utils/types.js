@@ -39,7 +39,7 @@ export const QueueTypes = {
 };
 
 export const BetTypes = {
-  Moneyline: 'Moneyline',
+  MoneyLine: 'MoneyLine',
   Spread: 'Spread',
   Total: 'Total',
 };

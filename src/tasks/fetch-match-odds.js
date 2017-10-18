@@ -87,21 +87,24 @@ export async function fetchMatchOddsFromPinnacle(job) {
         } = await match.get();
 
         // moneyline check
-        const sameMoneyline = oddsInDb.moneyLine.find(m =>
-          m.home === moneyline.home
+        const sameMoneyline = oddsInDb.find(m =>
+          m.type === BetTypes.MoneyLine
+          && m.home === moneyline.home
           && m.away === moneyline.away);
 
         if (sameMoneyline) {
-          throw new OddsDuplicationError(matchIdInDb, BetTypes.Moneyline, moneyline, oddsInDb);
+          throw new OddsDuplicationError(matchIdInDb, BetTypes.MoneyLine, moneyline, oddsInDb);
         }
 
         // add id
         moneyline._id = new ObjectId();
+        // add type
+        moneyline.type = BetTypes.MoneyLine;
         // add fetch date
         moneyline.fetchedAt = new Date();
 
         // save
-        oddsInDb.moneyLine.push(moneyline);
+        oddsInDb.push(moneyline);
         match.set('odds', oddsInDb);
 
         oddsBatchSave.push(match.save());
