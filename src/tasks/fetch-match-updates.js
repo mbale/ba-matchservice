@@ -142,7 +142,7 @@ export async function fetchMatchUpdatesFromPinnacle(job) {
               results.duplicateCount += 1;
               logger.info('Skipping dupe update');
             } else {
-              logger.error();
+              logger.error(error);
             }
           }
         }
@@ -153,13 +153,12 @@ export async function fetchMatchUpdatesFromPinnacle(job) {
         if (error instanceof MatchNotFoundBySourceError) {
           results.missingCount += 1;
           logger.info('Skipping missing match');
-        }
-
-        if (error instanceof InvalidSchemaBySourceError) {
+        } else if (error instanceof InvalidSchemaBySourceError) {
           results.invalidCount += 1;
           logger.info('Skipping invalid schema');
+        } else {
+          logger.error(error);
         }
-        logger.error(error);
       }
     }
 

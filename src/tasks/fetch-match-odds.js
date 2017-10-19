@@ -125,16 +125,15 @@ export async function fetchMatchOddsFromPinnacle(job) {
         if (error instanceof InvalidSchemaBySourceError) {
           results.invalidCount += 1;
           logger.info('Skipping invalid odds');
-        }
-        if (error instanceof MatchNotFoundBySourceError) {
+        } else if (error instanceof MatchNotFoundBySourceError) {
           results.missingCount += 1;
           logger.info('Skipping missing match');
-        }
-        if (error instanceof OddsDuplicationError) {
+        } else if (error instanceof OddsDuplicationError) {
           results.duplicateCount += 1;
           logger.info('Skipping dupe odds');
+        } else {
+          logger.error(error);
         }
-        logger.error(error);
       }
     }
 
