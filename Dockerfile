@@ -23,4 +23,4 @@ RUN eval "$(ssh-agent)" ssh-add /root/.ssh/ba_common_git \
 RUN yarn build
 CMD yarn start
 
-EXPOSE 3000
+EXPOSE 3050
