@@ -5,7 +5,7 @@
    "author": "Balazs Mocsai <me@bael.me>",
    "license": "MIT",
    "scripts": {
-      "start": "ts-node src/index.ts",
+      "start": "node build/main.js",
       "dev": "backpack dev",
       "build": "backpack build",
       "unit-test": "ts-node src/test/runner.ts"
