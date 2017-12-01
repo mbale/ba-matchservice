@@ -391,8 +391,9 @@ axios@^0.17.1:
     follow-redirects "^1.2.5"
     is-buffer "^1.1.5"
 
-ba-common@../ba-common:
+"ba-common@git+ssh://git@github.com:MainBase/ba-common.git":
   version "1.0.0"
+  resolved "git+ssh://git@github.com:MainBase/ba-common.git#e4f9545a15693cd7bd30494a05cb4c4349501ee4"
   dependencies:
     axios "^0.17.1"
     immutable "^3.8.2"

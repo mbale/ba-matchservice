@@ -69,7 +69,7 @@ class MatchController {
     if (query.ids) {
       if (query.ids instanceof Array) {
         // remove duplicate
-        const set = new Set(query.ids);
+        const set = new Set(query.ids.map(id => new ObjectId(id)));
         // convert back to array
         ids = [...set];
       } else {
@@ -104,8 +104,8 @@ class MatchController {
 
     const cursor = await matchRepository
       .createEntityCursor(dbQuery)
-      .skip(query.skip)
-      .limit(query.limit);
+      .skip(Number.parseInt(query.skip, 10))
+      .limit(Number.parseInt(query.limit, 10));
 
     while (await cursor.hasNext()) {
       matches.push(await cursor.next());

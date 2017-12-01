@@ -35,7 +35,7 @@
    "dependencies": {
       "axios": "^0.17.1",
       "axios-cloudflare": "^1.0.2",
-      "ba-common": "../ba-common",
+      "ba-common": "git+ssh://git@github.com:MainBase/ba-common.git",
       "bull": "^3.3.3",
       "cheerio": "^1.0.0-rc.2",
       "cloudscraper": "^1.4.1",
