@@ -102,9 +102,15 @@ class MatchController {
       dbQuery.updates.$elemMatch.statusType = query.statusType;
     }
 
+    let skip = Number.parseInt(query.limit) * (Number.parseInt(query.page) - 1);
+
+    if (skip < 0) {
+      skip = 0;
+    }
+
     const cursor = await matchRepository
       .createEntityCursor(dbQuery)
-      .skip(Number.parseInt(query.skip, 10))
+      .skip(skip)
       .limit(Number.parseInt(query.limit, 10));
 
     while (await cursor.hasNext()) {

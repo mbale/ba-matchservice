@@ -393,7 +393,7 @@ axios@^0.17.1:
 
 "ba-common@git+ssh://git@github.com:MainBase/ba-common.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:MainBase/ba-common.git#e4f9545a15693cd7bd30494a05cb4c4349501ee4"
+  resolved "git+ssh://git@github.com:MainBase/ba-common.git#1343538abf244252ad9231673f5d713c907b4778"
   dependencies:
     axios "^0.17.1"
     immutable "^3.8.2"
