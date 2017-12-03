@@ -91,7 +91,7 @@ class MatchController {
 
     interface Query {
       updates?: {
-        $elemMatch: {
+        $elemMatch?: {
           statusType?: MatchStatusType,
         },
       };
@@ -105,9 +105,13 @@ class MatchController {
       Field operators
     */
 
-    const dbQuery : Query = {};
+    const dbQuery : Query = {
+    };
 
     if (query.statusType) {
+      dbQuery.updates = {
+        $elemMatch: {},
+      };
       dbQuery.updates.$elemMatch.statusType = query.statusType;
     }
 
