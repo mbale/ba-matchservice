@@ -64,6 +64,7 @@ class MatchController {
     /*
       List all mode
     */
+
     let ids : ObjectId[] = [];
 
     if (query.ids) {
@@ -94,13 +95,41 @@ class MatchController {
           statusType?: MatchStatusType,
         },
       };
+      gameId?: ObjectID;
+      homeTeamId?: ObjectID;
+      awayTeamId?: ObjectID;
+      leagueId?: ObjectID;
     }
+
+    /*
+      Field operators
+    */
 
     const dbQuery : Query = {};
 
     if (query.statusType) {
       dbQuery.updates.$elemMatch.statusType = query.statusType;
     }
+
+    if (query.gameId) {
+      dbQuery.gameId = new ObjectID(query.gameId);
+    }
+
+    if (query.homeTeamId) {
+      dbQuery.homeTeamId = new ObjectID(query.homeTeamId);
+    }
+
+    if (query.awayTeamId) {
+      dbQuery.awayTeamId = new ObjectID(query.awayTeamId);
+    }
+
+    if (query.leagueId) {
+      dbQuery.leagueId = new ObjectID(query.leagueId);
+    }
+
+    /*
+      Logical operators
+    */
 
     let skip = Number.parseInt(query.limit) * (Number.parseInt(query.page) - 1);
 
