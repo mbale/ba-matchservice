@@ -116,24 +116,28 @@ class MatchController {
 
     };
 
-    // we list all which have updates => completed
-    if (query.statusType === MatchStatusType.Completed) {
-      dbQuery['updates.0'] = {
-        $exists: true,
-      };
-    } else if (query.statusType === MatchStatusType.Upcoming) {
-      dbQuery.date = {
-        $gte: new Date(),
-      };
-      dbQuery['updates.0'] = {
-        $exists: false,
-      };
-    } else {
-      dbQuery.updates = {
-        $elemMatch: {},
-      };
+    console.log(query)
 
-      dbQuery.updates.$elemMatch.statusType = query.statusType;
+    // we list all which have updates => completed
+    if (query.statusType) {
+      if (query.statusType === MatchStatusType.Completed) {
+        dbQuery['updates.0'] = {
+          $exists: true,
+        };
+      } else if (query.statusType === MatchStatusType.Upcoming) {
+        dbQuery.date = {
+          $gte: new Date(),
+        };
+        dbQuery['updates.0'] = {
+          $exists: false,
+        };
+      } else {
+        dbQuery.updates = {
+          $elemMatch: {},
+        };
+  
+        dbQuery.updates.$elemMatch.statusType = query.statusType;
+      }
     }
 
     if (query.gameId) {
