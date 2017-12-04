@@ -92,8 +92,15 @@ class MatchController {
     interface Query {
       updates?: {
         $elemMatch?: {
+          $or?: {
+            statusType: MatchStatusType,
+          }[],
           statusType?: MatchStatusType,
         },
+      };
+      date?: {
+        $gte?: Date;
+        $lte?: Date;
       };
       gameId?: ObjectID;
       homeTeamId?: ObjectID;
@@ -106,12 +113,26 @@ class MatchController {
     */
 
     const dbQuery : Query = {
+
     };
 
-    if (query.statusType) {
+    // we list all which have updates => completed
+    if (query.statusType === MatchStatusType.Completed) {
+      dbQuery['updates.0'] = {
+        $exists: true,
+      };
+    } else if (query.statusType === MatchStatusType.Upcoming) {
+      dbQuery.date = {
+        $gte: new Date(),
+      };
+      dbQuery['updates.0'] = {
+        $exists: false,
+      };
+    } else {
       dbQuery.updates = {
         $elemMatch: {},
       };
+
       dbQuery.updates.$elemMatch.statusType = query.statusType;
     }
 
