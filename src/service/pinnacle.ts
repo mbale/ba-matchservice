@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 import axios from 'axios';
-import { RawMatch } from '../parser/index';
-import { MatchSourceType } from 'ba-common';
+import { RawMatch } from '../service/parser';
+import { MatchSourceType, MatchSource } from 'ba-common';
 import { List, Map } from 'immutable';
 
 dotenv.config();
@@ -25,23 +25,145 @@ interface MatchFetchResult {
 }
 
 /**
+ * Map and check data in format
+ * 
+ * @param {any} args 
+ * @returns {RawMatch} 
+ */
+function serializeMatchData(...args): RawMatch {
+
+  // homeTeam: string, awayTeam: string, 
+  // league: string, game: string, date: Date, _source: MatchSource
+  // find for empty strings
+  const empty = args.every(arg => arg !== '');
+  // find for undefined
+  const undefined = args.every(arg => arg !== 'undefined');
+
+  if (empty && undefined) {
+    return {
+      homeTeam: args[0],
+      awayTeam: args[1],
+      league: args[2],
+      game: args[3],
+      date: args[4],
+      _source: args[5],
+    };
+  }
+
+  throw Error('Missing data');
+}
+
+/**
  * Contains communication logics to pinnacle
  * 
  * @class PinnacleService
  */
 class PinnacleService {
   private opts : PinnacleServiceOpts = null;
+  private last: Date = null;
 
   /**
    * Creates an instance of PinnacleService.
    * @param {PinnacleServiceOpts} opts 
    * @memberof PinnacleService
    */
-  constructor(opts : PinnacleServiceOpts) {
+  constructor(opts : PinnacleServiceOpts, last?: Date) {
     if (!opts) {
       throw new Error('Missing options');
     }
+
+    if (last) {
+      this.last = last;
+    }
     this.opts = opts;
+  }
+
+  /**
+   * Pinnacle has differentations sometimes in entity names
+   * we remove that
+   * 
+   * @static
+   * @param {string} entityToCheck 
+   * @returns 
+   * @memberof PinnacleService
+   */
+  findAndRemoveKeywords(entityToCheck: string) {
+    // pinnacle related keywords
+    // only pass here lowercase keywords
+    const keywords = ['live', 'esports'];
+    let entity = entityToCheck.trim();
+    // we convert to find keywords
+    const entityLowerCase = entity.toLowerCase();
+
+    keywords.forEach((keyword) => {
+      // we check if keyword is in string
+      if (entityLowerCase.includes(keyword)) {
+        // get first index of the keywords
+        const keywordStartIndex = entityLowerCase.indexOf(keyword, 0);
+        // check where it ends
+        const keywordEndIndex = keywordStartIndex + keyword.length;
+        // cut out rest
+        entity = entity.substring(keywordEndIndex, entityLowerCase.length).trim();
+      }
+    });
+
+    return entity;
+  }
+
+  /**
+   * Split leaguename into game and league name
+   * 
+   * @param {string} leaguename 
+   * @returns 
+   * @memberof PinnacleService
+   */
+  splitLeagueIntoLeagueAndGame(leaguename: string) {
+    let league = leaguename;
+    let game = null;
+    // include here pinnacle related separators
+    // order is important e.g cs:go - all stars
+    const separators = ['-', ':'];
+    // we only split once
+    let alreadySplitted : boolean = null;
+
+    // find for separators
+    for (const separator of separators) {
+      if (league.indexOf(separator) !== -1 && !alreadySplitted) {
+        const namesInArray = league.split(separator, 2);
+        // trim whitespace and set both fields
+        league = namesInArray[1].trim();
+        game = namesInArray[0].trim();
+        alreadySplitted = true;
+      }
+    }
+
+    return {
+      league,
+      game,
+    };
+  }
+
+  /**
+   * Often pinnacle stores in teamname the objective type of match (1st kills) etc
+   * 
+   * @param {string} teamname 
+   * @param {string} segment 
+   * @returns 
+   * @memberof PinnacleService
+   */
+  removeMapSegmentFromTeam(teamname: string, segment: string) {
+    let team = teamname;
+
+    // we find first occurance of segment
+    const startOfSegment = team.indexOf(segment);
+
+    // we found segment
+    if (startOfSegment !== -1) {
+      // cut out the original team name name
+      team = team.substring(0, startOfSegment).trim();
+    }
+
+    return team;
   }
 
   /**
@@ -67,7 +189,6 @@ class PinnacleService {
 
       const source = MatchSourceType.Pinnacle;
       const matches : RawMatch[] = [];
-      let lastFetchTime : Date = null;
 
       // filter them by matches
       leagues = leagues.filter(league => league.eventCount > 0);
@@ -92,23 +213,72 @@ class PinnacleService {
         } = data;
 
         // assign cache
-        lastFetchTime = last;
-
-        // leagueId <-> matches
-        const map = Map<string, RawMatch[]>();
+        this.last = last;
 
         for (const leagueWithMatch of leaguesWithMatches) {
-          console.log(leagueWithMatch)
+          let {
+            name: leaguename,
+          } = leagueWithMatch;
+  
+          const {
+            id: leagueId,
+          } = leagueWithMatch;
+  
+          let gamename = null;
+  
+          // split into game and league
+          const {
+            league,
+            game,
+          } = this.splitLeagueIntoLeagueAndGame(leaguename);
+          // get data
+          leaguename = league;
+          gamename = game;
+  
+          // strip out irrelevant keywords
+          gamename = this.findAndRemoveKeywords(gamename);
+  
+          for (const match of leagueWithMatch.events) {
+            const {
+              starts: date,
+              id: matchId,
+            } = match;
+  
+            let {
+              home: homeTeam,
+              away: awayTeam,
+            } = match;
+  
+            // we find (map) segment
+            homeTeam = this.removeMapSegmentFromTeam(homeTeam, '(');
+            awayTeam = this.removeMapSegmentFromTeam(awayTeam, '(');
+
+            try {
+              const serialized = 
+              serializeMatchData(homeTeam, awayTeam, leaguename, gamename, date, {
+                leagueId,
+                matchId,
+                type: source,
+                fetchedAt: new Date(),
+              });
+
+              matches.push(serialized);
+            } catch (error) {
+              console.log(error)
+            }
+          }
         }
       }
+
+      console.log(matches)
 
       return {
         source,
         matches,
-        lastFetchTime,
+        lastFetchTime: this.last,
       };
     } catch (error) {
-      console.log(error)
+      throw error;
     }
   }
 }

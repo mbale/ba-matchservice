@@ -146,6 +146,12 @@
     "@types/express-serve-static-core" "*"
     "@types/mime" "*"
 
+"@types/winston@^2.3.2", "@types/winston@^2.3.7":
+  version "2.3.7"
+  resolved "https://registry.yarnpkg.com/@types/winston/-/winston-2.3.7.tgz#2ea18b2dc772d459b6af0f587447704df31afec2"
+  dependencies:
+    "@types/node" "*"
+
 abbrev@1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.1.tgz#f8f2c887ad10bf67f634f005b6987fed3179aac8"
@@ -391,16 +397,32 @@ axios@^0.17.1:
     follow-redirects "^1.2.5"
     is-buffer "^1.1.5"
 
-"ba-common@git+ssh://git@github.com:MainBase/ba-common.git":
+ba-common@../ba-common:
   version "1.0.0"
-  resolved "git+ssh://git@github.com:MainBase/ba-common.git#2fbbe387396ef4cd505dec89e3bee8d5c669895b"
   dependencies:
     axios "^0.17.1"
+    bull "^3.3.7"
     immutable "^3.8.2"
     qs "^6.5.1"
     talisman "^0.20.0"
     typedi "^0.5.2"
     typeorm "^0.1.6"
+    winston "^2.4.0"
+    winston-mongodb "^3.0.1"
+
+"ba-common@git+ssh://git@github.com:MainBase/ba-common.git":
+  version "1.0.0"
+  resolved "git+ssh://git@github.com:MainBase/ba-common.git#0df3791ab2c030c9f812b0acfe6c4500372705c9"
+  dependencies:
+    axios "^0.17.1"
+    bull "^3.3.7"
+    immutable "^3.8.2"
+    qs "^6.5.1"
+    talisman "^0.20.0"
+    typedi "^0.5.2"
+    typeorm "^0.1.6"
+    winston "^2.4.0"
+    winston-mongodb "^3.0.1"
 
 babel-code-frame@^6.22.0, babel-code-frame@^6.26.0:
   version "6.26.0"
@@ -1148,6 +1170,18 @@ builtin-status-codes@^3.0.0:
 bull@^3.3.3:
   version "3.3.6"
   resolved "https://registry.yarnpkg.com/bull/-/bull-3.3.6.tgz#d622add5c434af1612e3197f62c89270a8fe1449"
+  dependencies:
+    bluebird "^3.5.0"
+    cron-parser "^2.4.1"
+    debuglog "^1.0.0"
+    ioredis "^3.1.4"
+    lodash "^4.17.4"
+    semver "^5.4.1"
+    uuid "^3.1.0"
+
+bull@^3.3.7:
+  version "3.3.7"
+  resolved "https://registry.yarnpkg.com/bull/-/bull-3.3.7.tgz#d8075830134dab28b075bd0bcd2aa5144a5c4218"
   dependencies:
     bluebird "^3.5.0"
     cron-parser "^2.4.1"
@@ -3427,7 +3461,7 @@ mongodb-core@2.1.17:
     bson "~1.0.4"
     require_optional "~1.0.0"
 
-mongodb@^2.2.33:
+mongodb@^2.2.19, mongodb@^2.2.33:
   version "2.2.33"
   resolved "https://registry.yarnpkg.com/mongodb/-/mongodb-2.2.33.tgz#b537c471d34a6651b48f36fdbf29750340e08b50"
   dependencies:
@@ -5118,7 +5152,14 @@ window-size@0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/window-size/-/window-size-0.1.0.tgz#5438cd2ea93b202efa3a19fe8887aee7c94f9c9d"
 
-winston@^2.3.0:
+winston-mongodb@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/winston-mongodb/-/winston-mongodb-3.0.1.tgz#e561f8335dd3011fa57aa68a75b305243f6ddb6e"
+  dependencies:
+    "@types/winston" "^2.3.2"
+    mongodb "^2.2.19"
+
+winston@^2.3.0, winston@^2.4.0:
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/winston/-/winston-2.4.0.tgz#808050b93d52661ed9fb6c26b3f0c826708b0aee"
   dependencies:

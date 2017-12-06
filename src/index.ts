@@ -1,13 +1,12 @@
-import PinnacleService from './service/pinnacle';
-import matchParser from './parser';
-import 'reflect-metadata';
-import apiGateway from './gateway/api';
 import * as dotenv from 'dotenv';
-import { dIConnection } from 'ba-common';
+import apiGateway from './gateway/api';
+import PinnacleService from './service/pinnacle';
+import { Container } from 'typedi';
+import { Queues, TaskService } from './service/task';
+import 'reflect-metadata';
 
 dotenv.config();
 
-const REDIS_URL = process.env.MATCH_SERVICE_REDIS_URL;
 const HTTP_PORT = Number.parseInt(process.env.MATCH_SERVICE_API_PORT, 10);
 
 const GET_LEAGUES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_LEAGUES_URL;
@@ -25,7 +24,16 @@ async function main() {
     getLeaguesUrl: GET_LEAGUES_URL,
   });
 
-  // await pinnacleService.fetchMatches();
+  const taskService = Container.get<TaskService>(TaskService);
+  const queueStore = taskService.queueStore;
+
+  const mQueue = queueStore.get(Queues.MatchFetching);
+
+  mQueue.add('sda', {
+    text: 'asdasd'
+  });
+
+  console.log(await mQueue.count())
 }
 
 main();

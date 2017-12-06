@@ -116,8 +116,6 @@ class MatchController {
 
     };
 
-    console.log(query)
-
     // we list all which have updates => completed
     if (query.statusType) {
       if (query.statusType === MatchStatusType.Completed) {
