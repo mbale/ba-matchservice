@@ -1,11 +1,13 @@
+import MatchParserService from './parser';
 import { dIConnection, dILogger, dIRedisQueues } from 'ba-common';
-import { Service, Container } from 'typedi';
+import { Service, Container, Inject } from 'typedi';
 import MatchEntity from '../entity/match';
 import { Connection } from 'typeorm/connection/Connection';
 import * as winston from 'winston';
 import * as dotenv from 'dotenv';
 import { Job, Queue } from 'bull';
 import PinnacleService from './pinnacle';
+import 'reflect-metadata';
 
 dotenv.config();
 
@@ -45,9 +47,15 @@ export class TaskService {
     for (const [name, queue] of this.queueStore.entries()) {
       this.logger.info(name);
     }
+    // https://github.com/typestack/typedi/issues/40
   }
 
   async matchFetching(job: Job) {
+    const logger = Container.get(TaskService).logger;
+    const connection = await Container.get(TaskService).connection;
+
+    const mongoRepository = connection.getMongoRepository<MatchEntity>(MatchEntity);
+  
     const pinnacleService = new PinnacleService({
       apiKey: API_KEY,
       sportId : SPORT_ID,
