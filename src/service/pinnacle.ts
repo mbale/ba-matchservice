@@ -3,6 +3,7 @@ import axios from 'axios';
 import { RawMatch } from '../service/parser';
 import { MatchSourceType, MatchSource } from 'ba-common';
 import { List, Map } from 'immutable';
+import { Service } from 'typedi';
 
 dotenv.config();
 
@@ -11,17 +12,17 @@ const GET_MATCHES_URL = process.env.PINNACLE_GET_MATCHES_URL;
 const SPORT_ID = process.env.PINNACLE_SPORT_ID;
 const API_KEY = process.env.PINNACLE_API_KEY;
 
-interface PinnacleServiceOpts {
+export interface PinnacleServiceOpts {
   getLeaguesUrl : string;
   getMatchesUrl : string;
   sportId : number;
   apiKey : string;
 }
 
-interface MatchFetchResult {
+export interface MatchFetchResult {
   source : MatchSourceType;
   matches : RawMatch[];
-  lastFetchTime : Date;
+  lastFetchTime : string;
 }
 
 /**
@@ -58,19 +59,22 @@ function serializeMatchData(...args): RawMatch {
  * 
  * @class PinnacleService
  */
+@Service()
 class PinnacleService {
   private opts : PinnacleServiceOpts = null;
-  private last: Date = null;
+  private last: string = null;
 
   /**
    * Creates an instance of PinnacleService.
    * @param {PinnacleServiceOpts} opts 
    * @memberof PinnacleService
    */
-  constructor(opts : PinnacleServiceOpts, last?: Date) {
+  constructor(opts : PinnacleServiceOpts, last?: string) {
     if (!opts) {
       throw new Error('Missing options');
     }
+
+    console.log('yo')
 
     if (last) {
       this.last = last;
