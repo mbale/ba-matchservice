@@ -1,12 +1,12 @@
-import MatchParserService from './parser';
-import { dIConnection, dILogger, dIRedisQueues } from 'ba-common';
-import { Service, Container, Inject } from 'typedi';
-import MatchEntity from '../entity/match';
-import { Connection } from 'typeorm/connection/Connection';
-import * as winston from 'winston';
 import * as dotenv from 'dotenv';
-import { Job, Queue } from 'bull';
+import * as winston from 'winston';
+import MatchEntity from '../entity/match';
+import MatchParserService from './parser';
 import PinnacleService from './pinnacle';
+import { Connection } from 'typeorm/connection/Connection';
+import { Container, Inject, Service } from 'typedi';
+import { dIConnection, dILogger, dIRedisQueues } from 'ba-common';
+import { Job, Queue } from 'bull';
 import 'reflect-metadata';
 
 dotenv.config();
@@ -33,40 +33,40 @@ export enum Queues {
  * @class TaskService
  */
 @Service()
-export class TaskService {
-  constructor(
-    // inject db connection and let native mongodb library handle connecion issues (reconnect etc)
-    @dIConnection(MONGODB_URL, [MatchEntity], Container) private connection : Connection,
-    // inject logger
-    @dILogger(MONGODB_URL, winston, Container) private logger: winston.LoggerInstance,
-    // bootstrap all redis queues
-    @dIRedisQueues(REDIS_URL, Queues, Container) public queueStore: Map<string, Queue>, 
-  ) {
-    this.logger.info(`Taskservice's successfully connected to redis at: ${REDIS_URL}`);
-    this.logger.info(`Queues: ${this.queueStore.size}`);
-    for (const [name, queue] of this.queueStore.entries()) {
-      this.logger.info(name);
-    }
-    // https://github.com/typestack/typedi/issues/40
-  }
+export abstract class TaskService {
+  @dIConnection(MONGODB_URL, [MatchEntity], Container)
+  private dbConnection: Connection;
 
-  async matchFetching(job: Job) {
-    const logger = Container.get(TaskService).logger;
-    const connection = await Container.get(TaskService).connection;
+  @dILogger(MONGODB_URL, winston, Container)
+  private logger: winston.LoggerInstance;
 
-    const mongoRepository = connection.getMongoRepository<MatchEntity>(MatchEntity);
+  @dIRedisQueues(REDIS_URL, Queues, Container)
+  public queueStore: Map<string, Queue>;
+
+  @Inject()
+  private pinnacleHTTPService : PinnacleService;
+
+  async matchFetching(job?: Job) {
+    const connection = await this.dbConnection;
+    // console.log(connection.driver.options)
+    // const logger = Container.get(TaskService).logger;
+    // const connection = await Container.get(TaskService).connection;
+
+    // const mongoRepository = connection.getMongoRepository<MatchEntity>(MatchEntity);
   
-    const pinnacleService = new PinnacleService({
-      apiKey: API_KEY,
-      sportId : SPORT_ID,
-      getMatchesUrl: GET_MATCHES_URL,
-      getLeaguesUrl: GET_LEAGUES_URL,
-    });
+    // const pinnacleService = new PinnacleService({
+    //   apiKey: API_KEY,
+    //   sportId : SPORT_ID,
+    //   getMatchesUrl: GET_MATCHES_URL,
+    //   getLeaguesUrl: GET_LEAGUES_URL,
+    // });
+    // const matchParserService = new MatchParserService();
 
-    const matches = await pinnacleService.fetchMatches();
-    console.log(matches.matches.length)
+    // const result = await pinnacleService.fetchMatches();
+
+    // result.matches.forEach(m => console.log(m))
     
-    console.log('hi')
+    // console.log('hi')
     // console.log(job)
   }
 }

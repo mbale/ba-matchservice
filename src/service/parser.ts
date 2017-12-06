@@ -1,4 +1,5 @@
 import { MatchSource } from 'ba-common';
+import * as winston from 'winston';
 
 export interface RawMatch {
   homeTeam : string;
@@ -9,12 +10,8 @@ export interface RawMatch {
   date : Date;
 }
 
-async function matchParser(matchInRaw : RawMatch) {
-  try {
-    
-  } catch (error) {
-    
-  }
+class MatchParserService {
+  constructor() {}
 }
 
-export default matchParser;
+export default MatchParserService;

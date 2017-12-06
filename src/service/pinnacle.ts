@@ -3,7 +3,7 @@ import axios from 'axios';
 import { RawMatch } from '../service/parser';
 import { MatchSourceType, MatchSource } from 'ba-common';
 import { List, Map } from 'immutable';
-import { Service } from 'typedi';
+import { Service, Inject } from 'typedi';
 
 dotenv.config();
 
@@ -61,26 +61,10 @@ function serializeMatchData(...args): RawMatch {
  */
 @Service()
 class PinnacleService {
-  private opts : PinnacleServiceOpts = null;
+  @Inject('pinnacleservice.options')
+  private opts : PinnacleServiceOpts;
+  @Inject('pinnacleservice.last')
   private last: string = null;
-
-  /**
-   * Creates an instance of PinnacleService.
-   * @param {PinnacleServiceOpts} opts 
-   * @memberof PinnacleService
-   */
-  constructor(opts : PinnacleServiceOpts, last?: string) {
-    if (!opts) {
-      throw new Error('Missing options');
-    }
-
-    console.log('yo')
-
-    if (last) {
-      this.last = last;
-    }
-    this.opts = opts;
-  }
 
   /**
    * Pinnacle has differentations sometimes in entity names
