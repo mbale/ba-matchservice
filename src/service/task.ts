@@ -5,8 +5,14 @@ import { Connection } from 'typeorm/connection/Connection';
 import * as winston from 'winston';
 import * as dotenv from 'dotenv';
 import { Job, Queue } from 'bull';
+import PinnacleService from './pinnacle';
 
 dotenv.config();
+
+const GET_LEAGUES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_LEAGUES_URL;
+const GET_MATCHES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_MATCHES_URL;
+const SPORT_ID = Number.parseInt(process.env.MATCH_SERVICE_PINNACLE_SPORT_ID, 10);
+const API_KEY = process.env.MATCH_SERVICE_PINNACLE_API_KEY;
 
 const MONGODB_URL = process.env.MATCH_SERVICE_MONGODB_URL;
 const REDIS_URL = process.env.MATCH_SERVICE_REDIS_URL;
@@ -40,4 +46,20 @@ export class TaskService {
       this.logger.info(name);
     }
   }
+
+  async matchFetching(job: Job) {
+    const pinnacleService = new PinnacleService({
+      apiKey: API_KEY,
+      sportId : SPORT_ID,
+      getMatchesUrl: GET_MATCHES_URL,
+      getLeaguesUrl: GET_LEAGUES_URL,
+    });
+
+    const matches = await pinnacleService.fetchMatches();
+    console.log(matches)
+    
+    console.log('hi')
+    console.log(job)
+  }
 }
+
