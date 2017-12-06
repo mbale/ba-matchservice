@@ -56,10 +56,10 @@ export class TaskService {
     });
 
     const matches = await pinnacleService.fetchMatches();
-    console.log(matches)
+    console.log(matches.matches.length)
     
     console.log('hi')
-    console.log(job)
+    // console.log(job)
   }
 }
 

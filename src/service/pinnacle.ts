@@ -111,6 +111,20 @@ class PinnacleService {
   }
 
   /**
+   * Pinnacle occasionally has wrong data in their db
+   * 
+   * @param {string} value 
+   * @returns {boolean} 
+   * @memberof PinnacleService
+   */
+  identifyFakeData(value: string): boolean {
+    if (value.toLowerCase().includes('please')) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Split leaguename into game and league name
    * 
    * @param {string} leaguename 
@@ -248,6 +262,13 @@ class PinnacleService {
               home: homeTeam,
               away: awayTeam,
             } = match;
+
+            const isItFake = this.identifyFakeData(homeTeam) || this.identifyFakeData(awayTeam);
+
+            // check if data includes wrong data and drop it
+            if (isItFake) {
+              break;
+            }
   
             // we find (map) segment
             homeTeam = this.removeMapSegmentFromTeam(homeTeam, '(');
@@ -269,8 +290,6 @@ class PinnacleService {
           }
         }
       }
-
-      console.log(matches)
 
       return {
         source,
