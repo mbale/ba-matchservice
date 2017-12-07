@@ -62,6 +62,8 @@ class PinnacleService {
   @Inject('pinnacleservice.options')
   private opts: PinnacleServiceOpts;
 
+  private last: string;
+
   @dILogger(MONGODB_URL, winston, Container)
   private logger: winston.LoggerInstance;
 
@@ -214,6 +216,8 @@ class PinnacleService {
           league: leaguesWithMatches,
         } = data;
 
+        this.last = last;
+
         for (const leagueWithMatch of leaguesWithMatches) {
           let {
             name: leaguename,
@@ -279,7 +283,7 @@ class PinnacleService {
       return {
         source,
         matches,
-        lastFetchTime: last,
+        lastFetchTime: this.last,
       };
     } catch (error) {
       throw error;
