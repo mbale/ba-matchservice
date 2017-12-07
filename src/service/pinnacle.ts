@@ -1,16 +1,14 @@
 import * as dotenv from 'dotenv';
 import axios from 'axios';
 import { RawMatch } from '../service/parser';
-import { MatchSourceType, MatchSource } from 'ba-common';
+import { MatchSourceType, MatchSource, dILogger } from 'ba-common';
 import { List, Map } from 'immutable';
-import { Service, Inject } from 'typedi';
+import { Service, Inject, Container } from 'typedi';
+import * as winston from 'winston';
 
 dotenv.config();
 
-const GET_LEAGUES_URL = process.env.PINNACLE_GET_LEAGUES_URL;
-const GET_MATCHES_URL = process.env.PINNACLE_GET_MATCHES_URL;
-const SPORT_ID = process.env.PINNACLE_SPORT_ID;
-const API_KEY = process.env.PINNACLE_API_KEY;
+const MONGODB_URL = process.env.MATCH_SERVICE_MONGODB_URL;
 
 export interface PinnacleServiceOpts {
   getLeaguesUrl : string;
@@ -62,9 +60,10 @@ function serializeMatchData(...args): RawMatch {
 @Service()
 class PinnacleService {
   @Inject('pinnacleservice.options')
-  private opts : PinnacleServiceOpts;
-  @Inject('pinnacleservice.last')
-  private last: string = null;
+  private opts: PinnacleServiceOpts;
+
+  @dILogger(MONGODB_URL, winston, Container)
+  private logger: winston.LoggerInstance;
 
   /**
    * Pinnacle has differentations sometimes in entity names
@@ -174,8 +173,9 @@ class PinnacleService {
    * @returns {Promise<MatchFetchResult>} 
    * @memberof PinnacleService
    */
-  async fetchMatches() : Promise<MatchFetchResult> {
+  async fetchMatches(last?: string) : Promise<MatchFetchResult> {
     try {
+      this.logger.info('hi from pinnacleservice')
       let {
         data: {
           leagues,
@@ -213,9 +213,6 @@ class PinnacleService {
           last,
           league: leaguesWithMatches,
         } = data;
-
-        // assign cache
-        this.last = last;
 
         for (const leagueWithMatch of leaguesWithMatches) {
           let {
@@ -282,7 +279,7 @@ class PinnacleService {
       return {
         source,
         matches,
-        lastFetchTime: this.last,
+        lastFetchTime: last,
       };
     } catch (error) {
       throw error;

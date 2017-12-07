@@ -11,7 +11,7 @@ export interface RawMatch {
 }
 
 class MatchParserService {
-  constructor() {}
+  
 }
 
 export default MatchParserService;

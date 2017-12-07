@@ -5,8 +5,8 @@ import MatchParserService from './parser';
 import PinnacleService from './pinnacle';
 import { Connection } from 'typeorm/connection/Connection';
 import { Container, Inject, Service } from 'typedi';
-import { dIConnection, dILogger, dIRedisQueues } from 'ba-common';
-import { Job, Queue } from 'bull';
+import { dIConnection, dILogger, dIRedisQueues, MatchSourceType } from 'ba-common';
+import { Job, Queue, JobOptions } from 'bull';
 import 'reflect-metadata';
 
 dotenv.config();
@@ -33,7 +33,7 @@ export enum Queues {
  * @class TaskService
  */
 @Service()
-export abstract class TaskService {
+export class TaskService {
   @dIConnection(MONGODB_URL, [MatchEntity], Container)
   private dbConnection: Connection;
 
@@ -42,12 +42,31 @@ export abstract class TaskService {
 
   @dIRedisQueues(REDIS_URL, Queues, Container)
   public queueStore: Map<string, Queue>;
+  
+  private var: string;
 
   @Inject()
   private pinnacleHTTPService : PinnacleService;
 
-  async matchFetching(job?: Job) {
-    const connection = await this.dbConnection;
+  async setupTaskHandlers() {
+    this.queueStore.get(Queues.MatchFetching)
+      .process(MatchSourceType.Pinnacle, job => this.fetchPinnacleMatches(job));
+  }
+
+  
+  addTask(identifier: string, queue: Queues, data: any, jobOptions?: JobOptions) {
+    this.queueStore.get(queue).add(identifier, data, jobOptions);
+  }
+
+  async fetchPinnacleMatches(job?: Job) {
+    try {
+      // this.queueStore.get(Queues.MatchFetching).process('hi', this.matchFetching);
+      const connection = await this.dbConnection;
+      this.logger.info('hi from taskservice')
+      await this.pinnacleHTTPService.fetchMatches();
+    } catch (error) {
+      console.log(error)
+    }
     // console.log(connection.driver.options)
     // const logger = Container.get(TaskService).logger;
     // const connection = await Container.get(TaskService).connection;
