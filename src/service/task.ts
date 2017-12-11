@@ -3,7 +3,7 @@ import TeamHTTPService from './team';
 import * as dotenv from 'dotenv';
 import MatchParserService from './parser';
 import PinnacleHTTPService from './pinnacle';
-import { MatchSourceType } from 'ba-common';
+import { MatchSourceType, AppError } from 'ba-common';
 import { Job, JobOptions, Queue as IQueue } from 'bull';
 import { injectable, inject } from 'inversify';
 import { Connection } from 'typeorm/connection/Connection';
@@ -74,10 +74,9 @@ export default class MatchTaskService {
       }
 
       const result = await this.pinnacleHTTPService.fetchMatches(previousLast);
-      throw new Error('yo');
     } catch (error) {
-      console.log(error)
-      this.logger.error('error', function() {});
+      const e : AppError = error;
+      this.logger.error(e.message, e);
       throw error;
     }
 
