@@ -1,9 +1,15 @@
 import axios, { AxiosInstance } from 'axios';
 import { injectable, inject } from 'inversify';
-import { HTTPService } from 'ba-common';
+import { HTTPService, CompareQueryParams } from 'ba-common';
 
 @injectable()
-class TeamHTTPService extends HTTPService {}
+class TeamHTTPService extends HTTPService {
+  async compare(params: CompareQueryParams) {
+    const { data } = await this.axiosInstance.get('compare', {
+      params,
+    });
+  }
+}
 
 export default TeamHTTPService;
 
