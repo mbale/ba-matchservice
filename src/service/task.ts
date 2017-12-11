@@ -1,28 +1,18 @@
+import CacheEntity from '../entity/cache';
+import TeamHTTPService from './team';
 import * as dotenv from 'dotenv';
-import * as winston from 'winston';
-import MatchEntity from '../entity/match';
 import MatchParserService from './parser';
-import PinnacleService from './pinnacle';
+import PinnacleHTTPService from './pinnacle';
+import { MatchSourceType } from 'ba-common';
+import { Job, JobOptions, Queue as IQueue } from 'bull';
+import { injectable, inject } from 'inversify';
 import { Connection } from 'typeorm/connection/Connection';
-import { Container, Inject, Service } from 'typedi';
-import { dIConnection, dILogger, dIRedisQueues, MatchSourceType } from 'ba-common';
-import { Job, Queue, JobOptions } from 'bull';
-import 'reflect-metadata';
+import { LoggerInstance } from 'winston';
+import { ConnectionManager } from 'typeorm/connection/ConnectionManager';
 
-dotenv.config();
-
-const GET_LEAGUES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_LEAGUES_URL;
-const GET_MATCHES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_MATCHES_URL;
-const SPORT_ID = Number.parseInt(process.env.MATCH_SERVICE_PINNACLE_SPORT_ID, 10);
-const API_KEY = process.env.MATCH_SERVICE_PINNACLE_API_KEY;
-
-const MONGODB_URL = process.env.MATCH_SERVICE_MONGODB_URL;
-const REDIS_URL = process.env.MATCH_SERVICE_REDIS_URL;
-
-export enum Queues {
-  MatchFetching = 'fetch-matches',
-  MatchOddsFetching = 'fetch-match-odds',
-  MatchUpdatesFetching = 'fetch-match-updates',
+export interface IdentifierHandler {
+  identifier: MatchSourceType;
+  handler: string;
 }
 
 /**
@@ -32,54 +22,64 @@ export enum Queues {
  * @export
  * @class TaskService
  */
-@Service()
-export class TaskService {
-  @dIConnection(MONGODB_URL, [MatchEntity], Container)
-  private dbConnection: Connection;
-
-  @dILogger(MONGODB_URL, winston, Container)
-  private logger: winston.LoggerInstance;
-
-  @dIRedisQueues(REDIS_URL, Queues, Container)
-  public queueStore: Map<string, Queue>;
+@injectable()
+export default class MatchTaskService {
+  constructor(
+    @inject(PinnacleHTTPService) private pinnacleHTTPService: PinnacleHTTPService,
+    @inject(TeamHTTPService) private teamHTTPService: TeamHTTPService,
+    @inject(ConnectionManager) private dbConnection: ConnectionManager,
+    @inject('logger') private logger: LoggerInstance,
+    @inject('queuestore') public queueStore: Map<string, IQueue>,
+    @inject('handlerstore') private handlerStore: Map<string, IdentifierHandler[]>,
+  ) {
+    this.logger.info('Taskservice');
+    this.logger.info('Queue names:');
+    this.queueStore.forEach((queue, queuename) => this.logger.info(queuename));
   
-  private var: string;
-
-  @Inject()
-  private pinnacleHTTPService : PinnacleService;
-
-  async setupTaskHandlers() {
-    this.queueStore.get(Queues.MatchFetching)
-      .process(MatchSourceType.Pinnacle, job => this.fetchPinnacleMatches(job));
-  }
-
+    const ownProperties = Object
+      .getOwnPropertyNames(MatchTaskService.prototype)
+      .filter(prop => !prop.includes('constructor'));
   
-  addTask(identifier: string, queue: Queues, data: any, jobOptions?: JobOptions) {
-    this.queueStore.get(queue).add(identifier, data, jobOptions);
+    this.logger.info('Queue handlers:');
+    this.handlerStore.forEach((handlers, queuename) => {
+      handlers.forEach((identifierObj) => {
+        // check if class contains handler for it and it has the correct queuename
+        if (ownProperties.includes(identifierObj.handler) && queueStore.has(queuename)) {
+          queueStore.get(queuename)
+            .process(identifierObj.identifier, job => this[identifierObj.handler](job));
+          this.logger.info(`identifier: ${identifierObj.identifier}`);
+          this.logger.info(`handler: ${identifierObj.handler}`);
+        }
+      });
+    });
   }
 
   async fetchPinnacleMatches(job?: Job) {
     try {
-      // this.queueStore.get(Queues.MatchFetching).process('hi', this.matchFetching);
-      const connection = await this.dbConnection;
-      this.logger.info('hi from taskservice')
-      await this.pinnacleHTTPService.fetchMatches();
+      this.logger.info(`Starting task: 
+      name: ${this.fetchPinnacleMatches.name}
+      id: ${job.id}`);
+      const connection = this.dbConnection.get()
+
+      const cacheRepository = connection.getMongoRepository<CacheEntity>(CacheEntity);
+
+      const cache = await cacheRepository.findOne({
+        taskName: this.fetchPinnacleMatches.name,
+      });
+
+      let previousLast = null;
+
+      if (cache) {
+        previousLast = cache.last;
+      }
+
+      const result = await this.pinnacleHTTPService.fetchMatches(previousLast);
+      throw new Error('yo');
     } catch (error) {
       console.log(error)
+      this.logger.error('error', function() {});
+      throw error;
     }
-    // console.log(connection.driver.options)
-    // const logger = Container.get(TaskService).logger;
-    // const connection = await Container.get(TaskService).connection;
-
-    // const mongoRepository = connection.getMongoRepository<MatchEntity>(MatchEntity);
-  
-    // const pinnacleService = new PinnacleService({
-    //   apiKey: API_KEY,
-    //   sportId : SPORT_ID,
-    //   getMatchesUrl: GET_MATCHES_URL,
-    //   getLeaguesUrl: GET_LEAGUES_URL,
-    // });
-    // const matchParserService = new MatchParserService();
 
     // const result = await pinnacleService.fetchMatches();
 

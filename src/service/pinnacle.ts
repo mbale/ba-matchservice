@@ -1,16 +1,9 @@
-import * as dotenv from 'dotenv';
-import axios from 'axios';
 import { RawMatch } from '../service/parser';
-import { MatchSourceType, MatchSource, dILogger } from 'ba-common';
+import { MatchSourceType, MatchSource, HTTPService } from 'ba-common';
 import { List, Map } from 'immutable';
-import { Service, Inject, Container } from 'typedi';
-import * as winston from 'winston';
+import { injectable, inject } from 'inversify';
 
-dotenv.config();
-
-const MONGODB_URL = process.env.MATCH_SERVICE_MONGODB_URL;
-
-export interface PinnacleServiceOpts {
+export interface PinnacleHTTPServiceOpts {
   getLeaguesUrl : string;
   getMatchesUrl : string;
   sportId : number;
@@ -24,48 +17,43 @@ export interface MatchFetchResult {
 }
 
 /**
- * Map and check data in format
- * 
- * @param {any} args 
- * @returns {RawMatch} 
- */
-function serializeMatchData(...args): RawMatch {
-
-  // homeTeam: string, awayTeam: string, 
-  // league: string, game: string, date: Date, _source: MatchSource
-  // find for empty strings
-  const empty = args.every(arg => arg !== '');
-  // find for undefined
-  const undefined = args.every(arg => arg !== 'undefined');
-
-  if (empty && undefined) {
-    return {
-      homeTeam: args[0],
-      awayTeam: args[1],
-      league: args[2],
-      game: args[3],
-      date: args[4],
-      _source: args[5],
-    };
-  }
-
-  throw Error('Missing data');
-}
-
-/**
  * Contains communication logics to pinnacle
  * 
  * @class PinnacleService
  */
-@Service()
-class PinnacleService {
-  @Inject('pinnacleservice.options')
-  private opts: PinnacleServiceOpts;
-
+@injectable()
+class PinnacleHTTPService extends HTTPService {
+  @inject('pinnaclehttpservice.options')
+  private opts: PinnacleHTTPServiceOpts;
   private last: string;
 
-  @dILogger(MONGODB_URL, winston, Container)
-  private logger: winston.LoggerInstance;
+  /**
+   * Map and check data in format
+   * 
+   * @param {any} args 
+   * @returns {RawMatch} 
+   */
+  private serializeMatchData(...args): RawMatch {
+    // homeTeam: string, awayTeam: string, 
+    // league: string, game: string, date: Date, _source: MatchSource
+    // find for empty strings
+    const empty = args.every(arg => arg !== '');
+    // find for undefined
+    const undefined = args.every(arg => arg !== 'undefined');
+
+    if (empty && undefined) {
+      return {
+        homeTeam: args[0],
+        awayTeam: args[1],
+        league: args[2],
+        game: args[3],
+        date: args[4],
+        _source: args[5],
+      };
+    }
+
+    throw Error('Missing data');
+  }
 
   /**
    * Pinnacle has differentations sometimes in entity names
@@ -76,7 +64,7 @@ class PinnacleService {
    * @returns 
    * @memberof PinnacleService
    */
-  findAndRemoveKeywords(entityToCheck: string) {
+  private findAndRemoveKeywords(entityToCheck: string) {
     // pinnacle related keywords
     // only pass here lowercase keywords
     const keywords = ['live', 'esports'];
@@ -106,7 +94,7 @@ class PinnacleService {
    * @returns {boolean} 
    * @memberof PinnacleService
    */
-  identifyFakeData(value: string): boolean {
+  private identifyFakeData(value: string): boolean {
     if (value.toLowerCase().includes('please')) {
       return true;
     }
@@ -120,7 +108,7 @@ class PinnacleService {
    * @returns 
    * @memberof PinnacleService
    */
-  splitLeagueIntoLeagueAndGame(leaguename: string) {
+  private splitLeagueIntoLeagueAndGame(leaguename: string) {
     let league = leaguename;
     let game = null;
     // include here pinnacle related separators
@@ -154,7 +142,7 @@ class PinnacleService {
    * @returns 
    * @memberof PinnacleService
    */
-  removeMapSegmentFromTeam(teamname: string, segment: string) {
+  private removeMapSegmentFromTeam(teamname: string, segment: string) {
     let team = teamname;
 
     // we find first occurance of segment
@@ -175,14 +163,15 @@ class PinnacleService {
    * @returns {Promise<MatchFetchResult>} 
    * @memberof PinnacleService
    */
-  async fetchMatches(last?: string) : Promise<MatchFetchResult> {
+  public async fetchMatches(last?: string) : Promise<MatchFetchResult> {
     try {
-      this.logger.info('hi from pinnacleservice')
+      this.logger.info('Fetching matches from pinnacle API');
+      this.logger.info(`last: ${last}`)
       let {
         data: {
           leagues,
         },
-      } = await axios.get(this.opts.getLeaguesUrl, {
+      } = await this.axiosInstance.get(this.opts.getLeaguesUrl, {
         params: {
           sportId: this.opts.sportId,
         },
@@ -199,7 +188,7 @@ class PinnacleService {
 
       const {
         data,
-      } = await axios.get(this.opts.getMatchesUrl, {
+      } = await this.axiosInstance.get(this.opts.getMatchesUrl, {
         params: {
           sportId : this.opts.sportId,
           leagueIds : leagues.map(l => l.id),
@@ -265,7 +254,7 @@ class PinnacleService {
 
             try {
               const serialized = 
-              serializeMatchData(homeTeam, awayTeam, leaguename, gamename, date, {
+              this.serializeMatchData(homeTeam, awayTeam, leaguename, gamename, date, {
                 leagueId,
                 matchId,
                 type: source,
@@ -274,11 +263,13 @@ class PinnacleService {
 
               matches.push(serialized);
             } catch (error) {
-              console.log(error)
+              this.logger.error(error);
             }
           }
         }
       }
+
+      this.logger.info(`We got ${matches.length} matches`);
 
       return {
         source,
@@ -286,9 +277,10 @@ class PinnacleService {
         lastFetchTime: this.last,
       };
     } catch (error) {
+      this.logger.error(error);
       throw error;
     }
   }
 }
 
-export default PinnacleService;
+export default PinnacleHTTPService;
