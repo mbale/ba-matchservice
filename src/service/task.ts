@@ -9,6 +9,8 @@ import { injectable, inject } from 'inversify';
 import { Connection } from 'typeorm/connection/Connection';
 import { LoggerInstance } from 'winston';
 import { ConnectionManager } from 'typeorm/connection/ConnectionManager';
+import ParsingLogEntity from '../entity/parsing-log';
+import { sha1 } from 'object-hash';
 
 export interface IdentifierHandler {
   identifier: MatchSourceType;
@@ -63,6 +65,7 @@ export default class MatchTaskService {
       const connection = this.dbConnection.get();
 
       const cacheRepository = connection.getMongoRepository<CacheEntity>(CacheEntity);
+      const parserLogRepository = connection.getMongoRepository<ParsingLogEntity>(ParsingLogEntity);
 
       const cache = await cacheRepository.findOne({
         taskName: this.fetchPinnacleMatches.name,
@@ -74,9 +77,31 @@ export default class MatchTaskService {
         previousLast = cache.last;
       }
 
-      // const result = await this.pinnacleHTTPService.fetchMatches(previousLast);
+      const result = await this.pinnacleHTTPService.fetchMatches(previousLast);
+    
+      const parserLog = new ParsingLogEntity();
+  
+      parserLog.taskId = job.id;
+      parserLog.connections = [];
 
-      
+      this.logger.info(`Running parser service`);
+  
+      for (const match of result.matches.slice(0, 2)) {
+        const hash = sha1(match);
+        const parserResult = await this.matchParserService.run(match);
+  
+        parserLog.connections.push({
+          hash,
+          rawMatch: match,
+          result: parserResult,
+        });
+
+        this.logger.info(`
+        hash: ${hash},
+        result: ${parserResult}`);
+      }
+
+      // await parserLogRepository.save(parserLog);
     } catch (error) {
       const e : AppError = error;
       this.logger.error(e.message, e);

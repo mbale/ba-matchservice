@@ -1,9 +1,8 @@
+import TeamHTTPService from './team';
 import { MatchSource } from 'ba-common';
 import { inject, injectable } from 'inversify';
 import { LoggerInstance } from 'winston';
 import PinnacleHTTPService from './pinnacle';
-import { Connection } from 'typeorm/connection/Connection';
-import TeamHTTPService from './team';
 
 export interface RawMatch {
   homeTeam : string;
@@ -14,15 +13,30 @@ export interface RawMatch {
   date : Date;
 }
 
+export enum MatchParsingResult {
+  Fresh = 'new', Duplicate = 'duplicate', Invalid = 'invalid',
+}
+
 @injectable()
 class MatchParserService {
   constructor(
     @inject(TeamHTTPService) private teamHTTPService: TeamHTTPService,
     @inject('logger') private logger: LoggerInstance) {}
 
-  async run(rawMatch: RawMatch) {
-    //
-    this.logger.info('hi');
+  async run(rawMatch: RawMatch): Promise<MatchParsingResult> {
+    const homeTeamId = await this.teamHTTPService.compare({
+      'team-name': rawMatch.homeTeam,
+      'game-name': rawMatch.game,
+    });
+
+    const awayTeamId = await this.teamHTTPService.compare({
+      'team-name': rawMatch.awayTeam,
+      'game-name': rawMatch.game,
+    });
+
+    // this.logger.info('Comparing match with data');
+    
+    return MatchParsingResult.Fresh;
   }
 }
 

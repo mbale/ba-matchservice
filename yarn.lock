@@ -135,6 +135,10 @@
   version "8.0.53"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-8.0.53.tgz#396b35af826fa66aad472c8cb7b8d5e277f4e6d8"
 
+"@types/object-hash@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@types/object-hash/-/object-hash-1.1.0.tgz#be1f916203a04c526e19345cdae01b949d618554"
+
 "@types/qs@^6.5.1":
   version "6.5.1"
   resolved "https://registry.yarnpkg.com/@types/qs/-/qs-6.5.1.tgz#a38f69c62528d56ba7bd1f91335a8004988d72f7"
@@ -150,7 +154,7 @@
     "@types/express-serve-static-core" "*"
     "@types/mime" "*"
 
-"@types/winston@^2.3.2":
+"@types/winston@^2.3.2", "@types/winston@^2.3.7":
   version "2.3.7"
   resolved "https://registry.yarnpkg.com/@types/winston/-/winston-2.3.7.tgz#2ea18b2dc772d459b6af0f587447704df31afec2"
   dependencies:
@@ -395,7 +399,7 @@ axios@^0.17.1:
 
 "ba-common@git+ssh://git@github.com:MainBase/ba-common.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:MainBase/ba-common.git#19dc3d651e26ccfb77fd4da25ab7c80a090d6dbd"
+  resolved "git+ssh://git@github.com:MainBase/ba-common.git#ed70203c1f540723b3dc22d10b7b5c0de0acb578"
   dependencies:
     axios "^0.17.1"
     bull "^3.3.7"
@@ -3613,6 +3617,10 @@ object-copy@^0.1.0:
     copy-descriptor "^0.1.0"
     define-property "^0.2.5"
     kind-of "^3.0.3"
+
+object-hash@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/object-hash/-/object-hash-1.2.0.tgz#e96af0e96981996a1d47f88ead8f74f1ebc4422b"
 
 object-keys@^1.0.8:
   version "1.0.11"

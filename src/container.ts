@@ -1,55 +1,50 @@
+import * as dotenv from 'dotenv';
+import * as express from 'express';
+import * as qs from 'qs';
+import * as Queue from 'bull';
+import * as winston from 'winston';
+import axios from 'axios';
 import CacheEntity from './entity/cache';
+import LeagueEntity from './entity/league';
+import MatchHTTPController from './gateway/api';
+import MatchParserService from './service/parser';
+import ParsingLogEntity from './entity/parsing-log';
+import PinnacleHTTPService, { PinnacleHTTPServiceOpts } from './service/pinnacle';
+import TeamHTTPService from './service/team';
+import { Connection } from 'typeorm/connection/Connection';
+import { ConnectionManager } from 'typeorm/connection/ConnectionManager';
+import { ConnectionOptions, createConnection } from 'typeorm';
+import { Container } from 'inversify';
+import { Job, JobOptions, Queue as IQueue } from 'bull';
+import { List, Map } from 'immutable';
+import { MatchEntity } from './entity/match';
+import { MatchSourceType } from 'ba-common';
+import { useExpressServer, useContainer } from 'routing-controllers';
 import MatchTaskService, {
   IdentifierHandler,
 } from './service/task';
-import axios from 'axios';
-import { Container } from 'inversify';
-import TeamHTTPService from './service/team';
-import * as dotenv from 'dotenv';
-import * as qs from 'qs';
-import PinnacleHTTPService, { PinnacleHTTPServiceOpts } from './service/pinnacle';
-import * as winston from 'winston';
-import MatchParserService from './service/parser';
-import { Connection } from 'typeorm/connection/Connection';
-import { ConnectionOptions, createConnection, useContainer } from 'typeorm';
-import { ConnectionManager } from 'typeorm/connection/ConnectionManager';
-import { Map, List } from 'immutable';
-import * as Queue from 'bull';
-import { Job, JobOptions, Queue as IQueue } from 'bull';
-import { MatchSourceType } from 'ba-common';
-import { MatchEntity } from './entity/match';
-import LeagueEntity from './entity/league';
 
 dotenv.config();
 
-const TEAM_SERVICE_URL = process.env.TEAM_SERVICE_URL;
 const MONGODB_URL = process.env.MATCH_SERVICE_MONGODB_URL;
+const MATCH_SERVICE_REDIS_URL = process.env.MATCH_SERVICE_REDIS_URL;
+const HTTP_PORT = Number.parseInt(process.env.MATCH_SERVICE_API_PORT, 10);
 
 const GET_LEAGUES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_LEAGUES_URL;
 const GET_MATCHES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_MATCHES_URL;
 const SPORT_ID = Number.parseInt(process.env.MATCH_SERVICE_PINNACLE_SPORT_ID, 10);
 const API_KEY = process.env.MATCH_SERVICE_PINNACLE_API_KEY;
 
-const MATCH_SERVICE_REDIS_URL = process.env.MATCH_SERVICE_REDIS_URL;
+const TEAM_SERVICE_URL = process.env.TEAM_SERVICE_URL;
 
 async function main() {
   const container = new Container({
     autoBindInjectable: false,
   });
-  
-  /*
-    Set up dependencies
-  */
-  
-  const axiosInstance = axios.create({
-    baseURL: `${TEAM_SERVICE_URL}`,
-    paramsSerializer(param) {
-      // by default axios convert same query params into array in URL e.g. ids=[] 
-      return qs.stringify(param, { indices: false });
-    },
-  });
 
-  container.bind('axios').toFunction(axiosInstance);
+  /*
+    Logger
+  */
 
   const logger = new winston.Logger({
     transports: [
@@ -66,12 +61,30 @@ async function main() {
 
   logger.transports.mongodb.on('error', err => console.log(err));
 
-  // logger.unhandleExceptions(winston.transports.MongoDB);
+  logger.unhandleExceptions(winston.transports.MongoDB);
 
   container.bind('logger').toConstantValue(logger);
+
+  /*
+    Axios
+  */
+  
+  const axiosInstance = axios.create({
+    baseURL: `${TEAM_SERVICE_URL}`,
+    paramsSerializer(param) {
+      // by default axios convert same query params into array in URL e.g. ids=[] 
+      return qs.stringify(param, { indices: false });
+    },
+  });
+
+  container.bind('axios').toFunction(axiosInstance);
+
+  /*
+    Database
+  */
   
   const dbOptions : ConnectionOptions = {
-    entities: [MatchEntity, LeagueEntity, CacheEntity],
+    entities: [MatchEntity, LeagueEntity, CacheEntity, ParsingLogEntity],
     type: 'mongodb',
     url: MONGODB_URL,
     logging: ['query', 'error'],
@@ -89,16 +102,23 @@ async function main() {
     getMatchesUrl: GET_MATCHES_URL,
     sportId: SPORT_ID,
   };
+
+  /*
+    HTTPService
+  */
   
   container.bind('pinnaclehttpservice.options').toConstantValue(pinnacleHTTPServiceOptions);
   container.bind<PinnacleHTTPService>(PinnacleHTTPService).toSelf();
-
   container.bind<TeamHTTPService>(TeamHTTPService).toSelf();
-  
+
+  /*
+    Parser service
+  */
+
   container.bind<MatchParserService>(MatchParserService).toSelf();
 
   /*
-    Redis
+    Redis and injecting tasks
   */
 
   enum Queues {
@@ -124,9 +144,24 @@ async function main() {
   
   container.bind<MatchTaskService>(MatchTaskService).toSelf();
 
-  container.get(MatchTaskService)
-    .queueStore.get(Queues.MatchFetching).add(MatchSourceType.Pinnacle, {})
+  /*
+    REST API
+  */
 
+  container.bind<MatchHTTPController>(MatchHTTPController).toSelf();
+  
+  const app = express();
+  
+  useExpressServer(app, {
+    // cors: true,
+    validation: true,
+  });
+    
+  app.listen(HTTP_PORT, () => {
+    console.log(`Listening on ${HTTP_PORT}`);
+  });
+
+  // routing controllers will get any resolution from our global store
   useContainer(container);
 
   return container;
