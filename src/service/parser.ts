@@ -3,6 +3,7 @@ import { inject, injectable } from 'inversify';
 import { LoggerInstance } from 'winston';
 import PinnacleHTTPService from './pinnacle';
 import { Connection } from 'typeorm/connection/Connection';
+import TeamHTTPService from './team';
 
 export interface RawMatch {
   homeTeam : string;
@@ -16,10 +17,11 @@ export interface RawMatch {
 @injectable()
 class MatchParserService {
   constructor(
-    @inject(PinnacleHTTPService) private pinnacleHTTPService: PinnacleHTTPService,
+    @inject(TeamHTTPService) private teamHTTPService: TeamHTTPService,
     @inject('logger') private logger: LoggerInstance) {}
 
-  run() {
+  async run(rawMatch: RawMatch) {
+    //
     this.logger.info('hi');
   }
 }

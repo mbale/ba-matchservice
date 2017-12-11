@@ -28,6 +28,7 @@ export default class MatchTaskService {
     @inject(PinnacleHTTPService) private pinnacleHTTPService: PinnacleHTTPService,
     @inject(TeamHTTPService) private teamHTTPService: TeamHTTPService,
     @inject(ConnectionManager) private dbConnection: ConnectionManager,
+    @inject(MatchParserService) private matchParserService: MatchParserService,
     @inject('logger') private logger: LoggerInstance,
     @inject('queuestore') public queueStore: Map<string, IQueue>,
     @inject('handlerstore') private handlerStore: Map<string, IdentifierHandler[]>,
@@ -59,7 +60,7 @@ export default class MatchTaskService {
       this.logger.info(`Starting task: 
       name: ${this.fetchPinnacleMatches.name}
       id: ${job.id}`);
-      const connection = this.dbConnection.get()
+      const connection = this.dbConnection.get();
 
       const cacheRepository = connection.getMongoRepository<CacheEntity>(CacheEntity);
 
@@ -73,19 +74,14 @@ export default class MatchTaskService {
         previousLast = cache.last;
       }
 
-      const result = await this.pinnacleHTTPService.fetchMatches(previousLast);
+      // const result = await this.pinnacleHTTPService.fetchMatches(previousLast);
+
+      
     } catch (error) {
       const e : AppError = error;
       this.logger.error(e.message, e);
       throw error;
     }
-
-    // const result = await pinnacleService.fetchMatches();
-
-    // result.matches.forEach(m => console.log(m))
-    
-    // console.log('hi')
-    // console.log(job)
   }
 }
 

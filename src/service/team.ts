@@ -5,9 +5,15 @@ import { HTTPService, CompareQueryParams } from 'ba-common';
 @injectable()
 class TeamHTTPService extends HTTPService {
   async compare(params: CompareQueryParams) {
-    const { data } = await this.axiosInstance.get('compare', {
-      params,
-    });
+    try {
+      const { data } = await this.axiosInstance.get('compare', {
+        params,
+      });
+      
+      return data;
+    } catch (error) {
+      throw error;
+    }
   }
 }
 
