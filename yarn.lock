@@ -399,7 +399,7 @@ axios@^0.17.1:
 
 "ba-common@git+ssh://git@github.com:MainBase/ba-common.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:MainBase/ba-common.git#ed70203c1f540723b3dc22d10b7b5c0de0acb578"
+  resolved "git+ssh://git@github.com:MainBase/ba-common.git#c31c49b13e720dcd0aa61dcfe14845c671e86368"
   dependencies:
     axios "^0.17.1"
     bull "^3.3.7"
@@ -408,7 +408,7 @@ axios@^0.17.1:
     qs "^6.5.1"
     talisman "^0.20.0"
     typedi "^0.5.2"
-    typeorm "^0.1.6"
+    typeorm "^0.1.7"
     winston "^2.4.0"
     winston-mongodb "^3.0.2"
 
@@ -4833,9 +4833,9 @@ typemoq@^2.1.0:
     lodash "^4.17.4"
     postinstall-build "^5.0.1"
 
-typeorm@^0.1.6:
-  version "0.1.6"
-  resolved "https://registry.yarnpkg.com/typeorm/-/typeorm-0.1.6.tgz#77c385b4ef0a267a145da62989a369f741beb23d"
+typeorm@^0.1.7:
+  version "0.1.7"
+  resolved "https://registry.yarnpkg.com/typeorm/-/typeorm-0.1.7.tgz#40fdb0ff1d5f69560a43a9b21297cb293152a8e2"
   dependencies:
     app-root-path "^2.0.1"
     chalk "^2.0.1"

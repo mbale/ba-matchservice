@@ -11,15 +11,18 @@ import MatchParserService from './service/parser';
 import ParsingLogEntity from './entity/parsing-log';
 import PinnacleHTTPService, { PinnacleHTTPServiceOpts } from './service/pinnacle';
 import TeamHTTPService from './service/team';
-import { Connection } from 'typeorm/connection/Connection';
-import { ConnectionManager } from 'typeorm/connection/ConnectionManager';
-import { ConnectionOptions, createConnection } from 'typeorm';
+import {
+  Connection,
+  ConnectionManager,
+  ConnectionOptions,
+  createConnection,
+  } from 'typeorm';
 import { Container } from 'inversify';
 import { Job, JobOptions, Queue as IQueue } from 'bull';
 import { List, Map } from 'immutable';
 import { MatchEntity } from './entity/match';
 import { MatchSourceType } from 'ba-common';
-import { useExpressServer, useContainer } from 'routing-controllers';
+import { useContainer, useExpressServer } from 'routing-controllers';
 import MatchTaskService, {
   IdentifierHandler,
 } from './service/task';
@@ -94,25 +97,26 @@ async function main() {
   // initiate connection so binding is awaiting until it's done 
   // => we don't need initializer call in every contained instance
   await connectionManager.create(dbOptions).connect();
-  container.bind(ConnectionManager).toConstantValue(connectionManager);
   
+  container.bind(ConnectionManager).toConstantValue(connectionManager);
+
+  /*
+    HTTPService
+  */
+
   const pinnacleHTTPServiceOptions: PinnacleHTTPServiceOpts = {
     apiKey: API_KEY,
     getLeaguesUrl: GET_LEAGUES_URL,
     getMatchesUrl: GET_MATCHES_URL,
     sportId: SPORT_ID,
   };
-
-  /*
-    HTTPService
-  */
   
   container.bind('pinnaclehttpservice.options').toConstantValue(pinnacleHTTPServiceOptions);
   container.bind<PinnacleHTTPService>(PinnacleHTTPService).toSelf();
   container.bind<TeamHTTPService>(TeamHTTPService).toSelf();
 
   /*
-    Parser service
+    ParserService
   */
 
   container.bind<MatchParserService>(MatchParserService).toSelf();
@@ -158,7 +162,7 @@ async function main() {
   });
     
   app.listen(HTTP_PORT, () => {
-    console.log(`Listening on ${HTTP_PORT}`);
+    logger.info(`Listening on ${HTTP_PORT}`);
   });
 
   // routing controllers will get any resolution from our global store

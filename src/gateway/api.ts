@@ -23,10 +23,6 @@ import { injectable } from 'inversify';
 @injectable()
 @JsonController('/api')
 class MatchHTTPController extends HTTPController {
-  // constructor(
-  //   @dIConnection(MONGODB_URL, [MatchEntity, LeagueEntity], Container) 
-  //   private connection : Connection) {}
-
   /**
    * Health check
    * 

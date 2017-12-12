@@ -59,7 +59,7 @@
       "routing-controllers": "^0.7.6",
       "talisman": "^0.20.0",
       "typedi": "^0.5.2",
-      "typeorm": "^0.1.6",
+      "typeorm": "^0.1.7",
       "wikijs": "^4.4.0",
       "winston": "^2.4.0",
       "winston-mongodb": "^3.0.2"
