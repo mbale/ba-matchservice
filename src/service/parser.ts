@@ -1,5 +1,4 @@
-import TeamHTTPService from './team';
-import { MatchSource } from 'ba-common';
+import { MatchSource, TeamHTTPService } from 'ba-common';
 import { inject, injectable } from 'inversify';
 import { LoggerInstance } from 'winston';
 import PinnacleHTTPService from './pinnacle';
@@ -24,15 +23,20 @@ class MatchParserService {
     @inject('logger') private logger: LoggerInstance) {}
 
   async run(rawMatch: RawMatch): Promise<MatchParsingResult> {
-    const homeTeamId = await this.teamHTTPService.compare({
-      'team-name': rawMatch.homeTeam,
-      'game-name': rawMatch.game,
-    });
+    try {
+      // const homeTeamId = await this.teamHTTPService.compare({
+      //   'team-name': rawMatch.homeTeam,
+      //   'game-name': rawMatch.game,
+      // });
+  
+      // const awayTeamId = await this.teamHTTPService.compare({
+      //   'team-name': rawMatch.awayTeam,
+      //   'game-name': rawMatch.game,
+      // });
 
-    const awayTeamId = await this.teamHTTPService.compare({
-      'team-name': rawMatch.awayTeam,
-      'game-name': rawMatch.game,
-    });
+    } catch (error) {
+      console.log(error)
+    }
 
     // this.logger.info('Comparing match with data');
     

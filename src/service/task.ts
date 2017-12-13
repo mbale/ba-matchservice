@@ -1,9 +1,8 @@
 import CacheEntity from '../entity/cache';
-import TeamHTTPService from './team';
 import * as dotenv from 'dotenv';
 import MatchParserService from './parser';
 import PinnacleHTTPService from './pinnacle';
-import { MatchSourceType } from 'ba-common';
+import { MatchSourceType, TaskService } from 'ba-common';
 import { Job, JobOptions, Queue as IQueue } from 'bull';
 import { injectable, inject } from 'inversify';
 import { Connection } from 'typeorm/connection/Connection';
@@ -25,44 +24,20 @@ export interface IdentifierHandler {
  * @class TaskService
  */
 @injectable()
-export default class MatchTaskService {
-  constructor(
-    @inject(PinnacleHTTPService) private pinnacleHTTPService: PinnacleHTTPService,
-    @inject(TeamHTTPService) private teamHTTPService: TeamHTTPService,
-    @inject(ConnectionManager) private dbConnection: ConnectionManager,
-    @inject(MatchParserService) private matchParserService: MatchParserService,
-    @inject('logger') private logger: LoggerInstance,
-    @inject('queuestore') public queueStore: Map<string, IQueue>,
-    @inject('handlerstore') private handlerStore: Map<string, IdentifierHandler[]>,
-  ) {
-    this.logger.info('Taskservice');
-    this.logger.info('Queue names:');
-    this.queueStore.forEach((queue, queuename) => this.logger.info(queuename));
-  
-    const ownProperties = Object
-      .getOwnPropertyNames(MatchTaskService.prototype)
-      .filter(prop => !prop.includes('constructor'));
-  
-    this.logger.info('Queue handlers:');
-    this.handlerStore.forEach((handlers, queuename) => {
-      handlers.forEach((identifierObj) => {
-        // check if class contains handler for it and it has the correct queuename
-        if (ownProperties.includes(identifierObj.handler) && queueStore.has(queuename)) {
-          queueStore.get(queuename)
-            .process(identifierObj.identifier, job => this[identifierObj.handler](job));
-          this.logger.info(`identifier: ${identifierObj.identifier}`);
-          this.logger.info(`handler: ${identifierObj.handler}`);
-        }
-      });
-    });
-  }
+export default class MatchTaskService extends TaskService {
+  @inject('connectionmanager')
+  private connectionManager: ConnectionManager;
+  @inject(PinnacleHTTPService)
+  private pinnacleHTTPService: PinnacleHTTPService;
+  @inject(MatchParserService)
+  private matchParserService: MatchParserService;
 
   async fetchPinnacleMatches(job?: Job) {
     try {
       this.logger.info(`Starting task: 
       name: ${this.fetchPinnacleMatches.name}
       id: ${job.id}`);
-      const connection = this.dbConnection.get();
+      const connection = this.connectionManager.get();
 
       const cacheRepository = connection.getMongoRepository<CacheEntity>(CacheEntity);
       const parserLogRepository = connection.getMongoRepository<ParsingLogEntity>(ParsingLogEntity);

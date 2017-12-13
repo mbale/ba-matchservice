@@ -10,7 +10,6 @@ import MatchHTTPController from './gateway/api';
 import MatchParserService from './service/parser';
 import ParsingLogEntity from './entity/parsing-log';
 import PinnacleHTTPService, { PinnacleHTTPServiceOpts } from './service/pinnacle';
-import TeamHTTPService from './service/team';
 import {
   Connection,
   ConnectionManager,
@@ -21,12 +20,13 @@ import { Container } from 'inversify';
 import { Job, JobOptions, Queue as IQueue } from 'bull';
 import { List, Map } from 'immutable';
 import { MatchEntity } from './entity/match';
-import { MatchSourceType } from 'ba-common';
+import { MatchSourceType, TeamHTTPService } from 'ba-common';
 import { useContainer, useExpressServer } from 'routing-controllers';
-import MatchTaskService, {
+import {
   IdentifierHandler,
 } from './service/task';
 import 'winston-mongodb';
+import MatchTaskService from './service/task';
 // inject
 
 dotenv.config();
@@ -114,8 +114,11 @@ async function main() {
   };
   
   container.bind('pinnaclehttpservice.options').toConstantValue(pinnacleHTTPServiceOptions);
+  container.bind('httpservice.name').toConstantValue(PinnacleHTTPService.name);
   container.bind<PinnacleHTTPService>(PinnacleHTTPService).toSelf();
+  container.rebind('httpservice.name').toConstantValue(TeamHTTPService.name);
   container.bind<TeamHTTPService>(TeamHTTPService).toSelf();
+
 
   /*
     ParserService
@@ -149,6 +152,8 @@ async function main() {
   container.bind('queuestore').toConstantValue(queueStore);
   
   container.bind<MatchTaskService>(MatchTaskService).toSelf();
+
+  container.get(MatchTaskService)
 
   /*
     REST API
