@@ -26,6 +26,8 @@ import { useContainer, useExpressServer } from 'routing-controllers';
 import MatchTaskService, {
   IdentifierHandler,
 } from './service/task';
+import 'winston-mongodb';
+// inject
 
 dotenv.config();
 
@@ -98,7 +100,7 @@ async function main() {
   // => we don't need initializer call in every contained instance
   await connectionManager.create(dbOptions).connect();
   
-  container.bind(ConnectionManager).toConstantValue(connectionManager);
+  container.bind('connectionmanager').toConstantValue(connectionManager);
 
   /*
     HTTPService

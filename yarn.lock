@@ -399,16 +399,16 @@ axios@^0.17.1:
 
 "ba-common@git+ssh://git@github.com:MainBase/ba-common.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:MainBase/ba-common.git#c31c49b13e720dcd0aa61dcfe14845c671e86368"
+  resolved "git+ssh://git@github.com:MainBase/ba-common.git#f1e6f2ce15d1708de18dffe215bdba27566d389e"
   dependencies:
     axios "^0.17.1"
     bull "^3.3.7"
+    extendo-error "^1.0.1"
     immutable "^3.8.2"
     inversify "^4.6.0"
     qs "^6.5.1"
     talisman "^0.20.0"
-    typedi "^0.5.2"
-    typeorm "^0.1.7"
+    typeorm "^0.1.8"
     winston "^2.4.0"
     winston-mongodb "^3.0.2"
 
@@ -4840,6 +4840,23 @@ typeorm@^0.1.7:
     app-root-path "^2.0.1"
     chalk "^2.0.1"
     cli-highlight "^1.1.4"
+    dotenv "^4.0.0"
+    glob "^7.1.2"
+    js-yaml "^3.8.4"
+    mkdirp "^0.5.1"
+    reflect-metadata "^0.1.10"
+    xml2js "^0.4.17"
+    yargonaut "^1.1.2"
+    yargs "^9.0.1"
+
+typeorm@^0.1.8:
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/typeorm/-/typeorm-0.1.8.tgz#a0634ba992e970984b74fccd7f53c2b362e555ee"
+  dependencies:
+    app-root-path "^2.0.1"
+    chalk "^2.0.1"
+    cli-highlight "^1.1.4"
+    debug "^3.1.0"
     dotenv "^4.0.0"
     glob "^7.1.2"
     js-yaml "^3.8.4"

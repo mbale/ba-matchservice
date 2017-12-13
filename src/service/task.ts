@@ -3,7 +3,7 @@ import TeamHTTPService from './team';
 import * as dotenv from 'dotenv';
 import MatchParserService from './parser';
 import PinnacleHTTPService from './pinnacle';
-import { MatchSourceType, AppError } from 'ba-common';
+import { MatchSourceType } from 'ba-common';
 import { Job, JobOptions, Queue as IQueue } from 'bull';
 import { injectable, inject } from 'inversify';
 import { Connection } from 'typeorm/connection/Connection';
@@ -103,7 +103,7 @@ export default class MatchTaskService {
 
       // await parserLogRepository.save(parserLog);
     } catch (error) {
-      const e : AppError = error;
+      const e: Error = error;
       this.logger.error(e.message, e);
       throw error;
     }

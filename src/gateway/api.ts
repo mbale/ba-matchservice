@@ -14,7 +14,7 @@ import {
   QueryParams,
   Res,
   } from 'routing-controllers';
-import { dIConnection, MatchStatusType, GetMatchesQueryParams, HTTPController } from 'ba-common';
+import { MatchStatusType, GetMatchesQueryParams, HTTPController } from 'ba-common';
 import { ObjectId, ObjectID } from 'bson';
 import { Request } from 'express';
 import { Response } from 'express-serve-static-core';
@@ -48,7 +48,7 @@ class MatchHTTPController extends HTTPController {
     @QueryParams() query : GetMatchesQueryParams,
     @Res() response : Response,
   ) {
-    const connection = this.connection.get(); 
+    const connection = this.connectionManager.get(); 
     const matchRepository = connection.getMongoRepository<MatchEntity>(MatchEntity);
 
     /*
@@ -178,7 +178,7 @@ class MatchHTTPController extends HTTPController {
     @QueryParams() query : any,
     @Res() response : Response,
   ) {
-    const connection = this.connection.get();
+    const connection = this.connectionManager.get();
     
     const leagueRepository = connection.getMongoRepository<LeagueEntity>(LeagueEntity);
 
