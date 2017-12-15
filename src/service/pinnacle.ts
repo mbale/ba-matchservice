@@ -226,6 +226,10 @@ class PinnacleHTTPService extends HTTPService {
           // get data
           leaguename = league;
           gamename = game;
+
+          if (!leaguename || !gamename) {
+            break;
+          }
   
           // strip out irrelevant keywords
           gamename = this.findAndRemoveKeywords(gamename);

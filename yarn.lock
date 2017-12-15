@@ -399,7 +399,7 @@ axios@^0.17.1:
 
 "ba-common@git+ssh://git@github.com:MainBase/ba-common.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:MainBase/ba-common.git#5962a6237e128d028875eb3a5b0343b2cc5f481d"
+  resolved "git+ssh://git@github.com:MainBase/ba-common.git#5ae65ea4b108ac7c5111dc79dfea7d631a050fc0"
   dependencies:
     "@types/express" "^4.0.39"
     axios "^0.17.1"
