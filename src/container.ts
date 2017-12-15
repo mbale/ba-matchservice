@@ -20,13 +20,12 @@ import { Container } from 'inversify';
 import { Job, JobOptions, Queue as IQueue } from 'bull';
 import { List, Map } from 'immutable';
 import { MatchEntity } from './entity/match';
-import { MatchSourceType, TeamHTTPService } from 'ba-common';
+import { MatchSourceType, TeamHTTPService, LoggingMiddleware } from 'ba-common';
 import { useContainer, useExpressServer } from 'routing-controllers';
-import {
+import MatchTaskService, {
   IdentifierHandler,
 } from './service/task';
 import 'winston-mongodb';
-import MatchTaskService from './service/task';
 // inject
 
 dotenv.config();
@@ -64,11 +63,10 @@ async function main() {
     ],
   });
 
-  logger.transports.mongodb.on('error', err => console.log(err));
-
-  logger.unhandleExceptions(winston.transports.MongoDB);
-
+  logger.transports.mongodb.on('error', err => logger.info(err));
+  logger.unhandleExceptions(logger.transports.mongdob);
   container.bind('logger').toConstantValue(logger);
+  logger.info(`Logging's OK`);
 
   /*
     Axios
@@ -83,6 +81,7 @@ async function main() {
   });
 
   container.bind('axios').toFunction(axiosInstance);
+  logger.info(`Axios's OK`);
 
   /*
     Database
@@ -101,6 +100,7 @@ async function main() {
   await connectionManager.create(dbOptions).connect();
   
   container.bind('connectionmanager').toConstantValue(connectionManager);
+  logger.info(`DB's OK`);
 
   /*
     HTTPService
@@ -115,16 +115,19 @@ async function main() {
   
   container.bind('pinnaclehttpservice.options').toConstantValue(pinnacleHTTPServiceOptions);
   container.bind('httpservice.name').toConstantValue(PinnacleHTTPService.name);
-  container.bind<PinnacleHTTPService>(PinnacleHTTPService).toSelf();
-  container.rebind('httpservice.name').toConstantValue(TeamHTTPService.name);
-  container.bind<TeamHTTPService>(TeamHTTPService).toSelf();
 
+  container.bind<PinnacleHTTPService>(PinnacleHTTPService).toSelf();
+  logger.info(`PinnacleHTTPService's OK`);
+  container.rebind('httpservice.name').toConstantValue(TeamHTTPService.name);
+  logger.info(`TeamHTTPService's OK`);
+  container.bind<TeamHTTPService>(TeamHTTPService).toSelf();
 
   /*
     ParserService
   */
 
   container.bind<MatchParserService>(MatchParserService).toSelf();
+  logger.info(`MatchParserService's OK`);
 
   /*
     Redis and injecting tasks
@@ -150,30 +153,38 @@ async function main() {
 
   container.bind('handlerstore').toConstantValue(handlerStore);
   container.bind('queuestore').toConstantValue(queueStore);
+
+  logger.info(`HandlerStore's OK`);
+  logger.info(`QueueStore's OK`);
   
   container.bind<MatchTaskService>(MatchTaskService).toSelf();
 
-  container.get(MatchTaskService)
+  container.get(MatchTaskService);
+  logger.info(`MatchTaskService's OK`);
 
   /*
     REST API
   */
 
   container.bind<MatchHTTPController>(MatchHTTPController).toSelf();
+  logger.info(`MatchHTTPController's OK`);
   
   const app = express();
   
   useExpressServer(app, {
     // cors: true,
     validation: true,
+    middlewares: [LoggingMiddleware],
   });
     
   app.listen(HTTP_PORT, () => {
-    logger.info(`Listening on ${HTTP_PORT}`);
+    logger.info(`API's listening on ${HTTP_PORT}`);
   });
 
   // routing controllers will get any resolution from our global store
   useContainer(container);
+
+  logger.info(`Container's bootstrapped`);
 
   return container;
 }

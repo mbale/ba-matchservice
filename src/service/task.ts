@@ -59,9 +59,9 @@ export default class MatchTaskService extends TaskService {
       parserLog.taskId = job.id;
       parserLog.connections = [];
 
-      this.logger.info(`Running parser service`);
+      this.logger.info(`Running MatchParserService`);
   
-      for (const match of result.matches.slice(0, 2)) {
+      for (const match of result.matches.slice(0, 1)) {
         const hash = sha1(match);
         const parserResult = await this.matchParserService.run(match);
   
@@ -78,8 +78,8 @@ export default class MatchTaskService extends TaskService {
 
       // await parserLogRepository.save(parserLog);
     } catch (error) {
-      const e: Error = error;
-      this.logger.error(e.message, e);
+      this.logger.error(error.message, error);
+      this.logger.info(`Aborting task with id: ${job.id}`);
       throw error;
     }
   }

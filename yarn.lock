@@ -397,9 +397,25 @@ axios@^0.17.1:
     follow-redirects "^1.2.5"
     is-buffer "^1.1.5"
 
+ba-common@../ba-common:
+  version "1.0.0"
+  dependencies:
+    "@types/express" "^4.0.39"
+    axios "^0.17.1"
+    bull "^3.3.7"
+    extendo-error "^1.0.1"
+    immutable "^3.8.2"
+    inversify "^4.6.0"
+    qs "^6.5.1"
+    routing-controllers "^0.7.6"
+    talisman "^0.20.0"
+    typeorm "^0.1.8"
+    winston "^2.4.0"
+    winston-mongodb "^3.0.2"
+
 "ba-common@git+ssh://git@github.com:MainBase/ba-common.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:MainBase/ba-common.git#5ae65ea4b108ac7c5111dc79dfea7d631a050fc0"
+  resolved "git+ssh://git@github.com:MainBase/ba-common.git#ec024154bb1751efb012104132de07d7e5b030b3"
   dependencies:
     "@types/express" "^4.0.39"
     axios "^0.17.1"

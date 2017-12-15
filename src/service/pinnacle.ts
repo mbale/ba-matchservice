@@ -95,7 +95,7 @@ class PinnacleHTTPService extends HTTPService {
    * @memberof PinnacleService
    */
   private identifyFakeData(value: string): boolean {
-    if (value.toLowerCase().includes('please')) {
+    if (value.toLowerCase().includes('please') || value.toLowerCase().includes('select')) {
       return true;
     }
     return false;
@@ -166,7 +166,7 @@ class PinnacleHTTPService extends HTTPService {
   public async fetchMatches(last?: string) : Promise<MatchFetchResult> {
     try {
       this.logger.info('Fetching matches from pinnacle API');
-      this.logger.info(`last: ${last}`)
+      this.logger.info(`using last as ${last}`)
       let {
         data: {
           leagues,
