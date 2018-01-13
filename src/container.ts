@@ -71,11 +71,11 @@ async function main() {
   /*
     Axios
   */
-  
+
   const axiosInstance = axios.create({
     baseURL: `${TEAM_SERVICE_URL}`,
     paramsSerializer(param) {
-      // by default axios convert same query params into array in URL e.g. ids=[] 
+      // by default axios convert same query params into array in URL e.g. ids=[]
       return qs.stringify(param, { indices: false });
     },
   });
@@ -86,7 +86,7 @@ async function main() {
   /*
     Database
   */
-  
+
   const dbOptions : ConnectionOptions = {
     entities: [MatchEntity, LeagueEntity, CacheEntity, ParsingLogEntity],
     type: 'mongodb',
@@ -95,10 +95,10 @@ async function main() {
   };
 
   const connectionManager = new ConnectionManager();
-  // initiate connection so binding is awaiting until it's done 
+  // initiate connection so binding is awaiting until it's done
   // => we don't need initializer call in every contained instance
   await connectionManager.create(dbOptions).connect();
-  
+
   container.bind('connectionmanager').toConstantValue(connectionManager);
   logger.info(`DB's OK`);
 
@@ -112,7 +112,7 @@ async function main() {
     getMatchesUrl: GET_MATCHES_URL,
     sportId: SPORT_ID,
   };
-  
+
   container.bind('pinnaclehttpservice.options').toConstantValue(pinnacleHTTPServiceOptions);
   container.bind('httpservice.name').toConstantValue(PinnacleHTTPService.name);
 
@@ -138,7 +138,7 @@ async function main() {
     MatchOddsFetching = 'fetch-match-odds',
     MatchUpdatesFetching = 'fetch-match-updates',
   }
-  
+
   const handlerStore = Map<Queues, IdentifierHandler[]>()
     .set(Queues.MatchFetching, [{
       identifier: MatchSourceType.Pinnacle,
@@ -156,7 +156,7 @@ async function main() {
 
   logger.info(`HandlerStore's OK`);
   logger.info(`QueueStore's OK`);
-  
+
   container.bind<MatchTaskService>(MatchTaskService).toSelf();
 
   container.get(MatchTaskService);
@@ -168,15 +168,17 @@ async function main() {
 
   container.bind<MatchHTTPController>(MatchHTTPController).toSelf();
   logger.info(`MatchHTTPController's OK`);
-  
+  container.bind(LoggingMiddleware).toSelf();
+  logger.info(`LoggingMiddleware's OK`);
+
   const app = express();
-  
+
   useExpressServer(app, {
     // cors: true,
     validation: true,
     middlewares: [LoggingMiddleware],
   });
-    
+
   app.listen(HTTP_PORT, () => {
     logger.info(`API's listening on ${HTTP_PORT}`);
   });
