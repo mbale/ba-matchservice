@@ -19,15 +19,15 @@ import { ObjectId, ObjectID } from 'bson';
 import { Request } from 'express';
 import { Response } from 'express-serve-static-core';
 import { injectable } from 'inversify';
- 
+
 @injectable()
 @JsonController('/api')
 class MatchHTTPController extends HTTPController {
   /**
    * Health check
-   * 
-   * @param {Context} ctx 
-   * @returns 
+   *
+   * @param {Context} ctx
+   * @returns
    * @memberof TeamController
    */
   @Get('/')
@@ -37,10 +37,10 @@ class MatchHTTPController extends HTTPController {
 
   /**
    * Query or fetch all matches
-   * 
-   * @param {*} query 
-   * @param {Response} response 
-   * @returns 
+   *
+   * @param {*} query
+   * @param {Response} response
+   * @returns
    * @memberof MatchController
    */
   @Get('/matches')
@@ -48,8 +48,9 @@ class MatchHTTPController extends HTTPController {
     @QueryParams() query : GetMatchesQueryParams,
     @Res() response : Response,
   ) {
-    const connection = this.connectionManager.get(); 
+    const connection = this.connectionManager.get();
     const matchRepository = connection.getMongoRepository<MatchEntity>(MatchEntity);
+    const count = await matchRepository.count();
 
     /*
       List all mode
@@ -72,6 +73,7 @@ class MatchHTTPController extends HTTPController {
 
     if (ids.length !== 0) {
       matches = await matchRepository.findByIds(ids);
+      response.setHeader('X-Total-Count', matches.length);
       return response.send(matches);
     }
 
@@ -123,7 +125,7 @@ class MatchHTTPController extends HTTPController {
         dbQuery.updates = {
           $elemMatch: {},
         };
-  
+
         dbQuery.updates.$elemMatch.statusType = query.statusType;
       }
     }
@@ -163,14 +165,15 @@ class MatchHTTPController extends HTTPController {
       matches.push(await cursor.next());
     }
 
+    response.setHeader('count', count);
     return response.send(matches);
   }
 
   /**
    * Query of fetch all leagues
-   * 
-   * @param {*} query 
-   * @param {Response} response 
+   *
+   * @param {*} query
+   * @param {Response} response
    * @memberof MatchController
    */
   @Get('/leagues')
@@ -179,7 +182,7 @@ class MatchHTTPController extends HTTPController {
     @Res() response : Response,
   ) {
     const connection = this.connectionManager.get();
-    
+
     const leagueRepository = connection.getMongoRepository<LeagueEntity>(LeagueEntity);
 
     let ids : ObjectId[] = [];
@@ -199,7 +202,7 @@ class MatchHTTPController extends HTTPController {
     } else {
       leagues = await leagueRepository.find();
     }
-    
+
     return response.send(leagues);
   }
 }
