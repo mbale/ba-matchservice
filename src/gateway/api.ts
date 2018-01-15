@@ -98,6 +98,9 @@ class MatchHTTPController extends HTTPController {
       homeTeamId?: ObjectID;
       awayTeamId?: ObjectID;
       leagueId?: ObjectID;
+      gameSlug?: {
+        $ne?: string,
+      };
     }
 
     /*
@@ -105,7 +108,9 @@ class MatchHTTPController extends HTTPController {
     */
 
     const dbQuery : Query = {
-
+      gameSlug: {
+        $ne: '',
+      },
     };
 
     // we list all which have updates => completed
