@@ -157,6 +157,7 @@ class MatchHTTPController extends HTTPController {
 
     const cursor = await matchRepository
       .createEntityCursor(dbQuery)
+      .sort('date', -1)
       .skip(skip)
       .limit(Number.parseInt(query.limit, 10));
 
