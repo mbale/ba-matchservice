@@ -2,6 +2,9 @@ import { MatchSource, TeamHTTPService } from 'ba-common';
 import { inject, injectable } from 'inversify';
 import { LoggerInstance } from 'winston';
 import PinnacleHTTPService from './pinnacle';
+import { ConnectionManager } from 'typeorm/connection/ConnectionManager';
+import MatchEntity from '../entity/match';
+import LeagueEntity from '../entity/league';
 
 export interface RawMatch {
   homeTeam : string;
@@ -20,15 +23,17 @@ export enum MatchParsingResult {
 class MatchParserService {
   constructor(
     @inject(TeamHTTPService) private teamHTTPService: TeamHTTPService,
-    @inject('logger') private logger: LoggerInstance) {}
+    @inject('logger') private logger: LoggerInstance,
+    @inject('connectionmanager') private connectionManager: ConnectionManager)
+    {}
 
   async run(rawMatch: RawMatch): Promise<MatchParsingResult> {
     try {
-      this.logger.info(`Testing ${TeamHTTPService.name}'s availability`);
       await this.teamHTTPService.ping();
-      this.logger.info(`It's OK`);
 
-      this.logger.info(`Requesting ${TeamHTTPService.name} to compare`);
+      const matchRepository = this.connectionManager.get().getMongoRepository(MatchEntity);
+      const leagueRepository = this.connectionManager.get().getMongoRepository(LeagueEntity);
+
       const {
         gameId: homeTeamGameId,
         teamId: homeTeamId,
@@ -45,14 +50,41 @@ class MatchParserService {
         'game-name': rawMatch.game,
       });
 
-      this.logger.info(`Got result:
-        homeTeamId: ${homeTeamId}
-        homeTeamGameId: ${homeTeamGameId}
-        awayTeamId: ${awayTeamId}
-        awayTeamGameId: ${awayTeamGameId}
-      `);
+      const gameId = awayTeamGameId;
+      const date = rawMatch.date;
 
-      return MatchParsingResult.Fresh; 
+      const duplication = await matchRepository.findOne({
+        date,
+        homeTeamId,
+        awayTeamId,
+      });
+
+      if (duplication) {
+        return MatchParsingResult.Duplicate;
+      }
+
+      let league = await leagueRepository.findOne({
+        name: rawMatch.league,
+      });
+
+      if (!league) {
+        league = new LeagueEntity();
+        league.name = rawMatch.league;
+
+        league = await leagueRepository.save(league);
+      }
+
+      let match = new MatchEntity();
+
+      match.awayTeamId = awayTeamId;
+      match.homeTeamId = homeTeamId;
+      match.leagueId = league._id;
+      match.gameId = gameId;
+      match.date = rawMatch.date;
+
+      match = await matchRepository.save(match);
+
+      return MatchParsingResult.Fresh;
     } catch (error) {
       throw error;
     }

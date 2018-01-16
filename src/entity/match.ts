@@ -29,10 +29,10 @@ export class MatchEntity implements Match {
   date: Date;
 
   @Column()
-  odds: MatchOdds[];
+  odds: MatchOdds[] = [];
 
   @Column()
-  updates: MatchUpdate[];
+  updates: MatchUpdate[] = [];
 }
 
 export default MatchEntity​​;

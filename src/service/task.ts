@@ -19,7 +19,7 @@ export interface IdentifierHandler {
 /**
  * All of redis related task are in the same place
  * we by now don't have issues with any loss connection
- * 
+ *
  * @export
  * @class TaskService
  */
@@ -34,7 +34,7 @@ export default class MatchTaskService extends TaskService {
 
   async fetchPinnacleMatches(job?: Job) {
     try {
-      this.logger.info(`Starting task: 
+      this.logger.info(`Starting task:
       name: ${this.fetchPinnacleMatches.name}
       id: ${job.id}`);
       const connection = this.connectionManager.get();
@@ -53,30 +53,28 @@ export default class MatchTaskService extends TaskService {
       }
 
       const result = await this.pinnacleHTTPService.fetchMatches(previousLast);
-    
+
       const parserLog = new ParsingLogEntity();
-  
+
       parserLog.taskId = job.id;
       parserLog.connections = [];
 
       this.logger.info(`Running MatchParserService`);
-  
-      for (const match of result.matches.slice(0, 1)) {
+
+      for (const match of result.matches) {
         const hash = sha1(match);
         const parserResult = await this.matchParserService.run(match);
-  
+
         parserLog.connections.push({
           hash,
           rawMatch: match,
           result: parserResult,
         });
 
-        this.logger.info(`
-        hash: ${hash},
-        result: ${parserResult}`);
+        this.logger.info(`hash: ${hash}, result: ${parserResult}`);
       }
 
-      // await parserLogRepository.save(parserLog);
+      await parserLogRepository.save(parserLog);
     } catch (error) {
       this.logger.error(error.message, error);
       this.logger.info(`Aborting task with id: ${job.id}`);
