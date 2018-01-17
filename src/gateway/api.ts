@@ -72,7 +72,7 @@ class MatchHTTPController extends HTTPController {
 
     if (ids.length !== 0) {
       matches = await matchRepository.findByIds(ids);
-      response.setHeader('X-Total-Count', matches.length);
+      response.setHeader('count', matches.length);
       return response.send(matches);
     }
 
@@ -90,8 +90,7 @@ class MatchHTTPController extends HTTPController {
         },
       };
       date?: {
-        $gte?: Date;
-        $lte?: Date;
+        $gte?: string;
       };
       gameId?: ObjectID;
       homeTeamId?: ObjectID;
@@ -103,8 +102,7 @@ class MatchHTTPController extends HTTPController {
       Field operators
     */
 
-    const dbQuery : Query = {
-    };
+    const dbQuery : Query = {};
 
     // we list all which have updates => completed
     if (query.statusType) {
@@ -114,11 +112,11 @@ class MatchHTTPController extends HTTPController {
         };
       } else if (query.statusType === MatchStatusType.Upcoming) {
         dbQuery.date = {
-          $gte: new Date(),
+          $gte: new Date().toISOString(),
         };
-        dbQuery['updates.0'] = {
-          $exists: false,
-        };
+        // dbQuery['updates.0'] = {
+        //   $exists: false,
+        // };
       } else {
         dbQuery.updates = {
           $elemMatch: {},
@@ -156,15 +154,15 @@ class MatchHTTPController extends HTTPController {
 
     const cursor = await matchRepository
       .createEntityCursor(dbQuery)
-      .sort('date', -1)
+      .sort('date', 1)
       .skip(skip)
       .limit(Number.parseInt(query.limit, 10));
+
+    const count = await cursor.count(true);
 
     while (await cursor.hasNext()) {
       matches.push(await cursor.next());
     }
-
-    const count = await matchRepository.count(dbQuery);
 
     response.setHeader('count', count);
     return response.send(matches);

@@ -155,7 +155,7 @@ async function main() {
     }])
     .set(Queues.MatchUpdatesFetching, [{
       identifier: MatchSourceType.Pinnacle,
-      handler: 'fetchPinnacleUpdates'
+      handler: 'fetchPinnacleUpdates',
     }]);
 
   let queueStore: Map<string, IQueue> = Map();
