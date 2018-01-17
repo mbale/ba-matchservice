@@ -81,6 +81,7 @@ class MatchParserService {
       match.leagueId = league._id;
       match.gameId = gameId;
       match.date = rawMatch.date;
+      match._source = rawMatch._source;
 
       match = await matchRepository.save(match);
 

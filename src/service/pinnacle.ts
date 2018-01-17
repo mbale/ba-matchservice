@@ -6,6 +6,7 @@ import { injectable, inject } from 'inversify';
 export interface PinnacleHTTPServiceOpts {
   getLeaguesUrl : string;
   getMatchesUrl : string;
+  getOddsUrl: string;
   sportId : number;
   apiKey : string;
 }
@@ -18,7 +19,7 @@ export interface MatchFetchResult {
 
 /**
  * Contains communication logics to pinnacle
- * 
+ *
  * @class PinnacleService
  */
 @injectable()
@@ -29,12 +30,12 @@ class PinnacleHTTPService extends HTTPService {
 
   /**
    * Map and check data in format
-   * 
-   * @param {any} args 
-   * @returns {RawMatch} 
+   *
+   * @param {any} args
+   * @returns {RawMatch}
    */
   private serializeMatchData(...args): RawMatch {
-    // homeTeam: string, awayTeam: string, 
+    // homeTeam: string, awayTeam: string,
     // league: string, game: string, date: Date, _source: MatchSource
     // find for empty strings
     const empty = args.every(arg => arg !== '');
@@ -58,10 +59,10 @@ class PinnacleHTTPService extends HTTPService {
   /**
    * Pinnacle has differentations sometimes in entity names
    * we remove that
-   * 
+   *
    * @static
-   * @param {string} entityToCheck 
-   * @returns 
+   * @param {string} entityToCheck
+   * @returns
    * @memberof PinnacleService
    */
   private findAndRemoveKeywords(entityToCheck: string) {
@@ -89,9 +90,9 @@ class PinnacleHTTPService extends HTTPService {
 
   /**
    * Pinnacle occasionally has wrong data in their db
-   * 
-   * @param {string} value 
-   * @returns {boolean} 
+   *
+   * @param {string} value
+   * @returns {boolean}
    * @memberof PinnacleService
    */
   private identifyFakeData(value: string): boolean {
@@ -103,9 +104,9 @@ class PinnacleHTTPService extends HTTPService {
 
   /**
    * Split leaguename into game and league name
-   * 
-   * @param {string} leaguename 
-   * @returns 
+   *
+   * @param {string} leaguename
+   * @returns
    * @memberof PinnacleService
    */
   private splitLeagueIntoLeagueAndGame(leaguename: string) {
@@ -136,10 +137,10 @@ class PinnacleHTTPService extends HTTPService {
 
   /**
    * Often pinnacle stores in teamname the objective type of match (1st kills) etc
-   * 
-   * @param {string} teamname 
-   * @param {string} segment 
-   * @returns 
+   *
+   * @param {string} teamname
+   * @param {string} segment
+   * @returns
    * @memberof PinnacleService
    */
   private removeMapSegmentFromTeam(teamname: string, segment: string) {
@@ -159,22 +160,30 @@ class PinnacleHTTPService extends HTTPService {
 
   /**
    * Fetch matches from pinnacle
-   * 
-   * @returns {Promise<MatchFetchResult>} 
+   *
+   * @returns {Promise<MatchFetchResult>}
    * @memberof PinnacleService
    */
   public async fetchMatches(last?: string) : Promise<MatchFetchResult> {
     try {
       this.logger.info('Fetching matches from pinnacle API');
       this.logger.info(`using last as ${last}`)
+
+      const params : any = {
+        sportId: this.opts.sportId,
+        oddsFormat: 'decimal',
+      };
+
+      if (last) {
+        params.since = last;
+      }
+
       let {
         data: {
           leagues,
         },
       } = await this.axiosInstance.get(this.opts.getLeaguesUrl, {
-        params: {
-          sportId: this.opts.sportId,
-        },
+        params,
         headers: {
           Authorization: `Basic ${this.opts.apiKey}`,
         },
@@ -211,13 +220,13 @@ class PinnacleHTTPService extends HTTPService {
           let {
             name: leaguename,
           } = leagueWithMatch;
-  
+
           const {
             id: leagueId,
           } = leagueWithMatch;
-  
+
           let gamename = null;
-  
+
           // split into game and league
           const {
             league,
@@ -230,16 +239,16 @@ class PinnacleHTTPService extends HTTPService {
           if (!leaguename || !gamename) {
             break;
           }
-  
+
           // strip out irrelevant keywords
           gamename = this.findAndRemoveKeywords(gamename);
-  
+
           for (const match of leagueWithMatch.events) {
             const {
               starts: date,
               id: matchId,
             } = match;
-  
+
             let {
               home: homeTeam,
               away: awayTeam,
@@ -251,13 +260,13 @@ class PinnacleHTTPService extends HTTPService {
             if (isItFake) {
               break;
             }
-  
+
             // we find (map) segment
             homeTeam = this.removeMapSegmentFromTeam(homeTeam, '(');
             awayTeam = this.removeMapSegmentFromTeam(awayTeam, '(');
 
             try {
-              const serialized = 
+              const serialized =
               this.serializeMatchData(homeTeam, awayTeam, leaguename, gamename, date, {
                 leagueId,
                 matchId,
@@ -279,6 +288,91 @@ class PinnacleHTTPService extends HTTPService {
         source,
         matches,
         lastFetchTime: this.last,
+      };
+    } catch (error) {
+      this.logger.error(error);
+      throw error;
+    }
+  }
+
+  public async fetchOdds(last?: string) {
+    try {
+      this.logger.info('Fetching odds from pinnacle API');
+      this.logger.info(`using last as ${last}`);
+
+      const params : any = {
+        sportId: this.opts.sportId,
+        oddsFormat: 'decimal',
+      };
+
+      if (last) {
+        params.since = last;
+      }
+
+      const {
+        data: {
+          last: lastFetchTime,
+          leagues,
+        },
+      } = await this.axiosInstance.get(this.opts.getOddsUrl, {
+        params,
+        headers: {
+          Authorization: `Basic ${this.opts.apiKey}`,
+        },
+      });
+
+      const odds = [];
+
+      for (const league of leagues) {
+        league.events.forEach((event) => {
+          const matchWithMoneyline = event.periods.find(period => period.moneyline);
+          const matchWithSpreadOdds = event.periods.find(period => period.spreads);
+          const matchWithTotalOdds = event.periods.find(period => period.totals);
+
+          const matchId = event.id;
+          const leagueId = league.id;
+
+          let eligibleToSend = null;
+
+          const match : {
+            id: string;
+            leagueId: string;
+            odds: {
+              moneyline?: {};
+              spread?: {};
+              total?: {};
+            }
+          } = {
+            leagueId,
+            id: matchId,
+            odds: {},
+          };
+
+          // gather all odds data
+          if (matchWithMoneyline) {
+            match.odds.moneyline = matchWithMoneyline.moneyline;
+            eligibleToSend = true;
+          }
+
+          if (matchWithSpreadOdds) {
+            match.odds.spread = matchWithSpreadOdds.spreads;
+            eligibleToSend = true;
+          }
+
+          if (matchWithTotalOdds) {
+            match.odds.total = matchWithTotalOdds.totals[0];
+            eligibleToSend = true;
+          }
+
+          if (eligibleToSend) {
+            odds.push(match);
+          }
+        });
+      }
+
+      return {
+        odds,
+        lastFetchTime,
       };
     } catch (error) {
       this.logger.error(error);

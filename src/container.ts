@@ -36,6 +36,7 @@ const HTTP_PORT = Number.parseInt(process.env.MATCH_SERVICE_API_PORT, 10);
 
 const GET_LEAGUES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_LEAGUES_URL;
 const GET_MATCHES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_MATCHES_URL;
+const GET_ODDS_URL = process.env.MATCH_SERVICE_PINNACLE_GET_ODDS_URL;
 const SPORT_ID = Number.parseInt(process.env.MATCH_SERVICE_PINNACLE_SPORT_ID, 10);
 const API_KEY = process.env.MATCH_SERVICE_PINNACLE_API_KEY;
 
@@ -110,6 +111,7 @@ async function main() {
     apiKey: API_KEY,
     getLeaguesUrl: GET_LEAGUES_URL,
     getMatchesUrl: GET_MATCHES_URL,
+    getOddsUrl: GET_ODDS_URL,
     sportId: SPORT_ID,
   };
 
@@ -140,15 +142,51 @@ async function main() {
   }
 
   const handlerStore = Map<Queues, IdentifierHandler[]>()
+    // here handlers needs to be wired
     .set(Queues.MatchFetching, [{
       identifier: MatchSourceType.Pinnacle,
       handler: 'fetchPinnacleMatches',
+    }])
+    .set(Queues.MatchOddsFetching, [{
+      identifier: MatchSourceType.Pinnacle,
+      handler: 'fetchPinnacleOdds',
+    }])
+    .set(Queues.MatchUpdatesFetching, [{
+      identifier: MatchSourceType.Pinnacle,
+      handler: 'fetchPinnacleUpdates'
     }]);
 
   let queueStore: Map<string, IQueue> = Map();
 
   for (const [varName, queueName] of Object.entries(Queues)) {
-    queueStore = queueStore.set(queueName, new Queue(queueName, MATCH_SERVICE_REDIS_URL));
+    const queue = new Queue(queueName, MATCH_SERVICE_REDIS_URL);
+    queueStore = queueStore.set(queueName, queue);
+
+    // make the tasks if there is none
+    if (await queue.count() === 0) {
+      switch (queueName) {
+        case Queues.MatchFetching:
+          // queue.add(MatchSourceType.Pinnacle, {}, {
+          //   repeat: {
+          //     cron: '*/10 * * * *', // every ten minutes
+          //   },
+          // });
+          // queue.add(MatchSourceType.Pinnacle, {});
+          break;
+        case Queues.MatchOddsFetching:
+          // queue.add(MatchSourceType.Pinnacle, {}, {
+          //   repeat: {
+          //     cron: '*/30 * * * *', // every 30th minute
+          //   },
+          // });
+          // queue.add(MatchSourceType.Pinnacle, {});
+          break;
+        case Queues.MatchUpdatesFetching:
+          queue.add(MatchSourceType.Pinnacle, {});
+        default:
+          break;
+      }
+    }
   }
 
   container.bind('handlerstore').toConstantValue(handlerStore);

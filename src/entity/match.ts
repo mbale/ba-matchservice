@@ -1,4 +1,4 @@
-import { MatchOdds, MatchUpdate, Match } from 'ba-common';
+import { MatchOdds, MatchUpdate, Match, MatchSource } from 'ba-common';
 import {
   Entity,
   ObjectIdColumn,
@@ -29,10 +29,13 @@ export class MatchEntity implements Match {
   date: Date;
 
   @Column()
-  odds: MatchOdds[] = [];
+  odds: MatchOdds[] = []; // it gets later
 
   @Column()
-  updates: MatchUpdate[] = [];
+  updates: MatchUpdate[] = []; // it gets later
+
+  @Column()
+  _source: MatchSource; // doesn't need initializer - during the parsing it gets
 }
 
 export default MatchEntity​​;
