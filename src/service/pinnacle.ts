@@ -7,6 +7,7 @@ export interface PinnacleHTTPServiceOpts {
   getLeaguesUrl : string;
   getMatchesUrl : string;
   getOddsUrl: string;
+  getUpdatesUrl: string;
   sportId : number;
   apiKey : string;
 }
@@ -372,6 +373,55 @@ class PinnacleHTTPService extends HTTPService {
 
       return {
         odds,
+        lastFetchTime,
+      };
+    } catch (error) {
+      this.logger.error(error);
+      throw error;
+    }
+  }
+
+  async fetchUpdates(last?: string) {
+    try {
+      this.logger.info('Fetching updates from pinnacle API');
+      this.logger.info(`using last as ${last}`);
+
+      const params : any = {
+        sportId: this.opts.sportId,
+        oddsFormat: 'decimal',
+      };
+
+      if (last) {
+        params.since = last;
+      }
+
+      const updates = [];
+
+      const {
+        data: {
+          last: lastFetchTime,
+          leagues = [],
+        },
+      } = await this.axiosInstance.get(this.opts.getUpdatesUrl, {
+        params,
+        headers: {
+          Authorization: `Basic ${this.opts.apiKey}`,
+        },
+      });
+
+      for (const { events, id: leagueId } of leagues) {
+        for (const { id: matchId, periods } of events) {
+          const update = {
+            matchId,
+            leagueId,
+            periods,
+          };
+          updates.push(update);
+        }
+      }
+
+      return {
+        updates,
         lastFetchTime,
       };
     } catch (error) {

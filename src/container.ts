@@ -37,6 +37,7 @@ const HTTP_PORT = Number.parseInt(process.env.MATCH_SERVICE_API_PORT, 10);
 const GET_LEAGUES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_LEAGUES_URL;
 const GET_MATCHES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_MATCHES_URL;
 const GET_ODDS_URL = process.env.MATCH_SERVICE_PINNACLE_GET_ODDS_URL;
+const GET_UPDATES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_SCORES_URL;
 const SPORT_ID = Number.parseInt(process.env.MATCH_SERVICE_PINNACLE_SPORT_ID, 10);
 const API_KEY = process.env.MATCH_SERVICE_PINNACLE_API_KEY;
 
@@ -112,6 +113,7 @@ async function main() {
     getLeaguesUrl: GET_LEAGUES_URL,
     getMatchesUrl: GET_MATCHES_URL,
     getOddsUrl: GET_ODDS_URL,
+    getUpdatesUrl: GET_UPDATES_URL,
     sportId: SPORT_ID,
   };
 
@@ -182,7 +184,12 @@ async function main() {
           // queue.add(MatchSourceType.Pinnacle, {});
           break;
         case Queues.MatchUpdatesFetching:
-          queue.add(MatchSourceType.Pinnacle, {});
+          // queue.add(MatchSourceType.Pinnacle, {}, {
+          //   repeat: {
+          //     cron: '*/30 * * * *', // every 30th minute
+          //   },
+          // });
+          // queue.add(MatchSourceType.Pinnacle, {});
         default:
           break;
       }

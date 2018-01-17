@@ -9,9 +9,12 @@ import { inject, injectable } from 'inversify';
 import { Job, JobOptions, Queue as IQueue } from 'bull';
 import { LoggerInstance } from 'winston';
 import { MatchEntity } from '../entity/match';
-import { MatchOddsType, MatchSourceType, TaskService } from 'ba-common';
-import { sha1 } from 'object-hash';
 import { ObjectId } from 'bson';
+import { sha1 } from 'object-hash';
+import {
+  MatchOddsType, MatchSourceType,
+  TaskService, MatchMapType, MatchStatusType,
+} from 'ba-common';
 
 export interface IdentifierHandler {
   identifier: MatchSourceType;
@@ -111,8 +114,6 @@ export default class MatchTaskService extends TaskService {
       } = await this.pinnacleHTTPService.fetchOdds(previousLast);
       const leagueIds = odds.map(o => o.leagueId);
 
-      const matchBuffer = [];
-
       const matches = await matchRepository.find({
         where: {
           '_source.leagueId': {
@@ -159,6 +160,7 @@ export default class MatchTaskService extends TaskService {
       await matchRepository.save(matches);
     } catch (error) {
       this.logger.error(error);
+      this.logger.info(`Aborting task with id: ${job.id}`);
       throw error;
     }
   }
@@ -179,10 +181,133 @@ export default class MatchTaskService extends TaskService {
 
       const previousLast = cache ? cache.last : null;
 
+      const {
+        updates,
+        lastFetchTime,
+      } = await this.pinnacleHTTPService.fetchUpdates(previousLast);
+
+      const matchIds = updates.map(u => u.matchId);
+
+      const matches = await matchRepository.find({
+        where: {
+          '_source.matchId': {
+            $in: matchIds,
+          },
+        },
+      });
+
+      let counter = 0;
+      for (const update of updates) {
+        const match = matches.find(m => m._source.matchId === update.matchId);
+
+        const periods = update.periods;
+
+        if (match) {
+          for (const period of periods) {
+            const {
+              number,
+              status,
+              team1Score,
+              team2Score,
+              settledAt,
+            } = period;
+
+            match.updates.push({
+              mapType: this.pinnaclePeriodNumberToMapType(number),
+              statusType: this.pinnaclePeriodStatusToStatusType(status),
+              addedAt: new Date(),
+              homeTeamScore: team1Score,
+              awayTeamScore: team2Score,
+              endDate: settledAt,
+            });
+            counter = counter += 1;
+          }
+        }
+      }
+
+      this.logger.info(`${counter} fresh updates`);
+
+      // save udated cache
+      if (!cache) {
+        cache = new CacheEntity();
+        cache.taskName = this.fetchPinnacleUpdates.name;
+      }
+
+      cache.last = lastFetchTime;
+
+      await cacheRepository.save(cache);
+
+      // sync
+
+      await matchRepository.save(matches);
     } catch (error) {
       this.logger.error(error);
+      this.logger.info(`Aborting task with id: ${job.id}`);
       throw error;
     }
+  }
+
+  pinnaclePeriodNumberToMapType(period: number): MatchMapType {
+    let periodType : MatchMapType = null;
+
+    switch (period) {
+      case 0:
+        periodType = MatchMapType.Match;
+        break;
+      case 1:
+        periodType = MatchMapType.Map1;
+        break;
+      case 2:
+        periodType = MatchMapType.Map2;
+        break;
+      case 3:
+        periodType = MatchMapType.Map3;
+        break;
+      case 4:
+        periodType = MatchMapType.Map4;
+        break;
+      case 5:
+        periodType = MatchMapType.Map5;
+        break;
+      case 6:
+        periodType = MatchMapType.Map6;
+        break;
+      case 7:
+        periodType = MatchMapType.Map7;
+        break;
+      default:
+        periodType = MatchMapType.Unknown;
+        break;
+    }
+
+    return periodType;
+  }
+
+  pinnaclePeriodStatusToStatusType(status: number): MatchStatusType {
+    let statusType: MatchStatusType = null;
+
+    switch (status) {
+      case 1:
+        statusType = MatchStatusType.Settled;
+        break;
+      case 2:
+        statusType = MatchStatusType.ReSettled;
+        break;
+      case 3:
+        statusType = MatchStatusType.Canceled;
+        break;
+      case 4:
+        statusType = MatchStatusType.ReSettleCancelled;
+        break;
+      case 5:
+        statusType = MatchStatusType.Deleted;
+        break;
+      default:
+        statusType = MatchStatusType.Unknown;
+        break;
+    }
+
+    return statusType;
   }
 }
 
