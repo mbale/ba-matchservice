@@ -158,7 +158,7 @@ class MatchHTTPController extends HTTPController {
       .skip(skip)
       .limit(Number.parseInt(query.limit, 10));
 
-    const count = await cursor.count(true);
+    const count = await cursor.count(false);
 
     while (await cursor.hasNext()) {
       matches.push(await cursor.next());
