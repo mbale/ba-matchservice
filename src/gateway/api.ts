@@ -50,7 +50,6 @@ class MatchHTTPController extends HTTPController {
   ) {
     const connection = this.connectionManager.get();
     const matchRepository = connection.getMongoRepository<MatchEntity>(MatchEntity);
-    const count = await matchRepository.count();
 
     /*
       List all mode
@@ -164,6 +163,8 @@ class MatchHTTPController extends HTTPController {
     while (await cursor.hasNext()) {
       matches.push(await cursor.next());
     }
+
+    const count = await matchRepository.count(dbQuery);
 
     response.setHeader('count', count);
     return response.send(matches);
