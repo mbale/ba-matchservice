@@ -169,27 +169,27 @@ async function main() {
       logger.info('Adding default tasks');
       switch (queueName) {
         case Queues.MatchFetching:
-          // queue.add(MatchSourceType.Pinnacle, {}, {
-          //   repeat: {
-          //     cron: '*/10 * * * *', // every ten minutes
-          //   },
-          // });
+          queue.add(MatchSourceType.Pinnacle, {}, {
+            repeat: {
+              cron: '*/10 * * * *', // every ten minutes
+            },
+          });
           // queue.add(MatchSourceType.Pinnacle, {});
           break;
         case Queues.MatchOddsFetching:
-          // queue.add(MatchSourceType.Pinnacle, {}, {57303df34206a7375780309ba4f0ed1a892855b1,
-          //   repeat: {
-          //     cron: '*/30 * * * *', // every 30th minute
-          //   },
-          // });
+          queue.add(MatchSourceType.Pinnacle, {}, {
+            repeat: {
+              cron: '*/30 * * * *', // every 30th minute
+            },
+          });
           // queue.add(MatchSourceType.Pinnacle, {});
           break;
         case Queues.MatchUpdatesFetching:
-          // queue.add(MatchSourceType.Pinnacle, {}, {
-          //   repeat: {
-          //     cron: '*/30 * * * *', // every 30th minute
-          //   },
-          // });
+          queue.add(MatchSourceType.Pinnacle, {}, {
+            repeat: {
+              cron: '*/30 * * * *', // every 30th minute
+            },
+          });
           // queue.add(MatchSourceType.Pinnacle, {});
         default:
           break;
