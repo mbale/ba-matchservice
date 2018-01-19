@@ -90,7 +90,7 @@ class MatchHTTPController extends HTTPController {
         },
       };
       date?: {
-        $gte?: string;
+        $gte?: Date;
       };
       gameId?: ObjectID;
       homeTeamId?: ObjectID;
@@ -112,7 +112,7 @@ class MatchHTTPController extends HTTPController {
         };
       } else if (query.statusType === MatchStatusType.Upcoming) {
         dbQuery.date = {
-          $gte: new Date().toISOString(),
+          $gte: new Date(),
         };
         // dbQuery['updates.0'] = {
         //   $exists: false,

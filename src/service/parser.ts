@@ -5,6 +5,7 @@ import PinnacleHTTPService from './pinnacle';
 import { ConnectionManager } from 'typeorm/connection/ConnectionManager';
 import MatchEntity from '../entity/match';
 import LeagueEntity from '../entity/league';
+import { ObjectId } from 'bson';
 
 export interface RawMatch {
   homeTeam : string;
@@ -34,7 +35,7 @@ class MatchParserService {
       const matchRepository = this.connectionManager.get().getMongoRepository(MatchEntity);
       const leagueRepository = this.connectionManager.get().getMongoRepository(LeagueEntity);
 
-      const {
+      let {
         gameId: homeTeamGameId,
         teamId: homeTeamId,
       } = await this.teamHTTPService.compare({
@@ -42,7 +43,7 @@ class MatchParserService {
         'game-name': rawMatch.game,
       });
 
-      const {
+      let {
         gameId: awayTeamGameId,
         teamId: awayTeamId,
       } = await this.teamHTTPService.compare({
@@ -50,8 +51,13 @@ class MatchParserService {
         'game-name': rawMatch.game,
       });
 
-      const gameId = awayTeamGameId;
-      const date = rawMatch.date;
+      homeTeamId = new ObjectId(homeTeamId);
+      homeTeamGameId = new ObjectId(homeTeamGameId);
+      awayTeamId = new ObjectId(awayTeamId);
+      awayTeamGameId = new ObjectId(awayTeamGameId);
+
+      const gameId = new ObjectId(awayTeamGameId);
+      const date = new Date(rawMatch.date);
 
       const duplication = await matchRepository.findOne({
         date,
@@ -80,7 +86,7 @@ class MatchParserService {
       match.homeTeamId = homeTeamId;
       match.leagueId = league._id;
       match.gameId = gameId;
-      match.date = rawMatch.date;
+      match.date = date;
       match._source = rawMatch._source;
 
       match = await matchRepository.save(match);

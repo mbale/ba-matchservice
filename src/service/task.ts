@@ -218,7 +218,7 @@ export default class MatchTaskService extends TaskService {
               addedAt: new Date(),
               homeTeamScore: team1Score,
               awayTeamScore: team2Score,
-              endDate: settledAt,
+              endDate: new Date(settledAt),
             });
             counter = counter += 1;
           }

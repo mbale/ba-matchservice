@@ -166,6 +166,7 @@ async function main() {
 
     // make the tasks if there is none
     if (await queue.count() === 0) {
+      logger.info('Adding default tasks');
       switch (queueName) {
         case Queues.MatchFetching:
           // queue.add(MatchSourceType.Pinnacle, {}, {
@@ -176,7 +177,7 @@ async function main() {
           // queue.add(MatchSourceType.Pinnacle, {});
           break;
         case Queues.MatchOddsFetching:
-          // queue.add(MatchSourceType.Pinnacle, {}, {
+          // queue.add(MatchSourceType.Pinnacle, {}, {57303df34206a7375780309ba4f0ed1a892855b1,
           //   repeat: {
           //     cron: '*/30 * * * *', // every 30th minute
           //   },
