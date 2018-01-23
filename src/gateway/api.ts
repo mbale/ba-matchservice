@@ -104,12 +104,15 @@ class MatchHTTPController extends HTTPController {
 
     const dbQuery : Query = {};
 
+    let sortByDate = 1;
+
     // we list all which have updates => completed
     if (query.statusType) {
       if (query.statusType === MatchStatusType.Completed) {
         dbQuery['updates.0'] = {
           $exists: true,
         };
+        sortByDate = -1;
       } else if (query.statusType === MatchStatusType.Upcoming) {
         dbQuery.date = {
           $gte: new Date(),
@@ -154,7 +157,7 @@ class MatchHTTPController extends HTTPController {
 
     const cursor = await matchRepository
       .createEntityCursor(dbQuery)
-      .sort('date', 1)
+      .sort('date', sortByDate)
       .skip(skip)
       .limit(Number.parseInt(query.limit, 10));
 
