@@ -91,6 +91,7 @@ class MatchHTTPController extends HTTPController {
       };
       date?: {
         $gte?: Date;
+        $lte?: Date;
       };
       gameId?: ObjectID;
       homeTeamId?: ObjectID;
@@ -113,6 +114,9 @@ class MatchHTTPController extends HTTPController {
           $exists: true,
         };
         sortByDate = -1;
+        dbQuery.date = {
+          $lte: new Date(),
+        };
       } else if (query.statusType === MatchStatusType.Upcoming) {
         dbQuery.date = {
           $gte: new Date(),
