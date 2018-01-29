@@ -97,7 +97,8 @@ class PinnacleHTTPService extends HTTPService {
    * @memberof PinnacleService
    */
   private identifyFakeData(value: string): boolean {
-    if (value.toLowerCase().includes('please') || value.toLowerCase().includes('select')) {
+    if (value.toLowerCase().includes('please')
+    || value.toLowerCase().includes('select') || value.toLowerCase().includes('map')) {
       return true;
     }
     return false;
