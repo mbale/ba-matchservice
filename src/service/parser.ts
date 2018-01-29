@@ -6,6 +6,7 @@ import { ConnectionManager } from 'typeorm/connection/ConnectionManager';
 import MatchEntity from '../entity/match';
 import LeagueEntity from '../entity/league';
 import { ObjectId } from 'bson';
+import { ObjectID } from 'typeorm';
 
 export interface RawMatch {
   homeTeam : string;
@@ -89,7 +90,10 @@ class MatchParserService {
       match.date = date;
       match._source = rawMatch._source;
 
-      match = await matchRepository.save(match);
+      // pinnacle sometimes has matches with the same team...
+      if (!homeTeamId.equals(awayTeamId)) {
+        match = await matchRepository.save(match);
+      }
 
       return MatchParsingResult.Fresh;
     } catch (error) {
