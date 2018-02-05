@@ -117,6 +117,9 @@ class MatchHTTPController extends HTTPController {
         dbQuery.date = {
           $lte: new Date(),
         };
+        dbQuery['updates.0'] = {
+          $exists: true,
+        };
       } else if (query.statusType === MatchStatusType.Upcoming) {
         dbQuery.date = {
           $gte: new Date(),
