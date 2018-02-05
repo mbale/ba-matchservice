@@ -103,7 +103,7 @@ class MatchHTTPController extends HTTPController {
       Field operators
     */
 
-    const dbQuery : Query = {};
+    const dbQuery : Query | any = {};
 
     let sortByDate = 1;
 
@@ -124,6 +124,7 @@ class MatchHTTPController extends HTTPController {
         dbQuery.date = {
           $gte: new Date(),
         };
+
         dbQuery['updates.0'] = {
           $exists: false,
         };
