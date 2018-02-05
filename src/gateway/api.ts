@@ -121,9 +121,9 @@ class MatchHTTPController extends HTTPController {
         dbQuery.date = {
           $gte: new Date(),
         };
-        // dbQuery['updates.0'] = {
-        //   $exists: false,
-        // };
+        dbQuery['updates.0'] = {
+          $exists: false,
+        };
       } else {
         dbQuery.updates = {
           $elemMatch: {},
