@@ -117,6 +117,12 @@ class MatchHTTPController extends HTTPController {
         dbQuery.date = {
           $lte: new Date(),
         };
+
+        dbQuery.updates = {
+          $elemMatch: {
+            statusType: MatchStatusType.Settled,
+          },
+        };
         dbQuery['updates.0'] = {
           $exists: true,
         };
