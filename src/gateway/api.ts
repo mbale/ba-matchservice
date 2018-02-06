@@ -125,6 +125,10 @@ class MatchHTTPController extends HTTPController {
           $gte: new Date(),
         };
 
+        dbQuery['odds.0'] = {
+          $exists: true,
+        };
+
         dbQuery['updates.0'] = {
           $exists: false,
         };
