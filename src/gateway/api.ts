@@ -148,9 +148,15 @@ class MatchHTTPController extends HTTPController {
     }
 
     if (query.gameIds) {
-      dbQuery.gameId = {
-        $in: query.gameIds.map(q => new ObjectID(q)),
-      };
+      if (query.gameIds instanceof Array) {
+        dbQuery.gameId = {
+          $in: query.gameIds.map(q => new ObjectID(q)),
+        };
+      } else {
+        dbQuery.gameId = {
+          $in: [query.gameIds],
+        };
+      }
     }
 
     if (query.homeTeamId) {
