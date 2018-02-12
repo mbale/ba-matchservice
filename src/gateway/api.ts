@@ -93,7 +93,7 @@ class MatchHTTPController extends HTTPController {
         $gte?: Date;
         $lte?: Date;
       };
-      gameId?: ObjectID;
+      gameIds?: ObjectID[];
       homeTeamId?: ObjectID;
       awayTeamId?: ObjectID;
       leagueId?: ObjectID;
@@ -147,8 +147,10 @@ class MatchHTTPController extends HTTPController {
       }
     }
 
-    if (query.gameId) {
-      dbQuery.gameId = new ObjectID(query.gameId);
+    if (query.gameIds) {
+      dbQuery.gameId = {
+        $in: query.gameIds.map(q => new ObjectID(q)),
+      };
     }
 
     if (query.homeTeamId) {
