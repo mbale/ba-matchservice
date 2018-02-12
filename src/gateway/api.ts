@@ -154,7 +154,7 @@ class MatchHTTPController extends HTTPController {
         };
       } else {
         dbQuery.gameId = {
-          $in: [query.gameIds],
+          $in: [new ObjectID(query.gameIds)],
         };
       }
     }
