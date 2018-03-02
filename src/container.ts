@@ -20,12 +20,15 @@ import { Container } from 'inversify';
 import { Job, JobOptions, Queue as IQueue } from 'bull';
 import { List, Map } from 'immutable';
 import { MatchEntity } from './entity/match';
-import { MatchSourceType, TeamHTTPService, LoggingMiddleware } from 'ba-common';
+import { MatchSourceType, TeamHTTPService, LoggingMiddleware, rabbitMQConfig } from 'ba-common';
 import { useContainer, useExpressServer } from 'routing-controllers';
+import * as rabbot from 'rabbot';
 import MatchTaskService, {
   IdentifierHandler,
 } from './service/task';
 import 'winston-mongodb';
+import { ObjectId } from 'mongodb';
+import { initRabbitMQ } from './gateway/rabbitmq'
 // inject
 
 dotenv.config();
@@ -33,7 +36,7 @@ dotenv.config();
 const MONGODB_URL = process.env.MATCH_SERVICE_MONGODB_URL;
 const MATCH_SERVICE_REDIS_URL = process.env.MATCH_SERVICE_REDIS_URL;
 const HTTP_PORT = Number.parseInt(process.env.MATCH_SERVICE_API_PORT, 10);
-
+const RABBITMQ_URI = process.env.RABBITMQ_URI;
 const GET_LEAGUES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_LEAGUES_URL;
 const GET_MATCHES_URL = process.env.MATCH_SERVICE_PINNACLE_GET_MATCHES_URL;
 const GET_ODDS_URL = process.env.MATCH_SERVICE_PINNACLE_GET_ODDS_URL;
@@ -127,6 +130,36 @@ async function main() {
   container.bind<TeamHTTPService>(TeamHTTPService).toSelf();
 
   /*
+    RabbitMQ layer
+  */
+
+  const exchanges = [
+    {
+      name: 'match-service',
+      type: 'topic',
+      persistent: true
+    },
+  ];
+
+  const queues = [
+    {
+      name: 'match-service', autoDelete: true, subscribe: true
+    },
+  ];
+
+  const bindings = [
+    {
+      exchange: 'match-service', target: 'match-service', keys: ['get-by-ids']
+    },
+  ]
+
+  await rabbot.configure(
+    rabbitMQConfig(RABBITMQ_URI, exchanges, queues, bindings
+  ))
+
+  initRabbitMQ(container)
+
+  /*
     ParserService
   */
 
@@ -162,7 +195,7 @@ async function main() {
 
   for (const [varName, queueName] of Object.entries(Queues)) {
     const queue = new Queue(queueName, MATCH_SERVICE_REDIS_URL);
-    queueStore = queueStore.set(queueName, queue);
+    // queueStore = queueStore.set(queueName, queue);
 
     // make the tasks if there is none
     if (await queue.count() === 0) {
@@ -200,8 +233,8 @@ async function main() {
   container.bind('handlerstore').toConstantValue(handlerStore);
   container.bind('queuestore').toConstantValue(queueStore);
 
-  logger.info(`HandlerStore's OK`);
-  logger.info(`QueueStore's OK`);
+  // logger.info(`HandlerStore's OK`);
+  // logger.info(`QueueStore's OK`);
 
   container.bind<MatchTaskService>(MatchTaskService).toSelf();
 
