@@ -169,7 +169,7 @@ class PinnacleHTTPService extends HTTPService {
   public async fetchMatches(last?: string) : Promise<MatchFetchResult> {
     try {
       this.logger.info('Fetching matches from pinnacle API');
-      this.logger.info(`using last as ${last}`)
+      this.logger.info(`using last as ${last}`);
 
       const params : any = {
         sportId: this.opts.sportId,

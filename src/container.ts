@@ -28,7 +28,7 @@ import MatchTaskService, {
 } from './service/task';
 import 'winston-mongodb';
 import { ObjectId } from 'mongodb';
-import { initRabbitMQ } from './gateway/rabbitmq'
+import { initRabbitMQ } from './gateway/rabbitmq';
 // inject
 
 dotenv.config();
@@ -137,27 +137,27 @@ async function main() {
     {
       name: 'match-service',
       type: 'topic',
-      persistent: true
+      persistent: true,
     },
   ];
 
   const queues = [
     {
-      name: 'match-service', autoDelete: true, subscribe: true
+      name: 'match-service', autoDelete: true, subscribe: true,
     },
   ];
 
   const bindings = [
     {
-      exchange: 'match-service', target: 'match-service', keys: ['get-by-ids']
+      exchange: 'match-service', target: 'match-service', keys: ['get-by-ids'],
     },
-  ]
+  ];
 
   await rabbot.configure(
-    rabbitMQConfig(RABBITMQ_URI, exchanges, queues, bindings
-  ))
+    rabbitMQConfig(RABBITMQ_URI, exchanges, queues, bindings,
+  ));
 
-  initRabbitMQ(container)
+  initRabbitMQ(container);
 
   /*
     ParserService
@@ -195,7 +195,7 @@ async function main() {
 
   for (const [varName, queueName] of Object.entries(Queues)) {
     const queue = new Queue(queueName, MATCH_SERVICE_REDIS_URL);
-    // queueStore = queueStore.set(queueName, queue);
+    queueStore = queueStore.set(queueName, queue);
 
     // make the tasks if there is none
     if (await queue.count() === 0) {
@@ -207,7 +207,7 @@ async function main() {
               cron: '*/10 * * * *', // every ten minutes
             },
           });
-          // queue.add(MatchSourceType.Pinnacle, {});
+          queue.add(MatchSourceType.Pinnacle, {});
           break;
         case Queues.MatchOddsFetching:
           queue.add(MatchSourceType.Pinnacle, {}, {
@@ -215,7 +215,7 @@ async function main() {
               cron: '*/30 * * * *', // every 30th minute
             },
           });
-          // queue.add(MatchSourceType.Pinnacle, {});
+          queue.add(MatchSourceType.Pinnacle, {});
           break;
         case Queues.MatchUpdatesFetching:
           queue.add(MatchSourceType.Pinnacle, {}, {
@@ -223,7 +223,7 @@ async function main() {
               cron: '*/30 * * * *', // every 30th minute
             },
           });
-          // queue.add(MatchSourceType.Pinnacle, {});
+          queue.add(MatchSourceType.Pinnacle, {});
         default:
           break;
       }
@@ -233,8 +233,8 @@ async function main() {
   container.bind('handlerstore').toConstantValue(handlerStore);
   container.bind('queuestore').toConstantValue(queueStore);
 
-  // logger.info(`HandlerStore's OK`);
-  // logger.info(`QueueStore's OK`);
+  logger.info(`HandlerStore's OK`);
+  logger.info(`QueueStore's OK`);
 
   container.bind<MatchTaskService>(MatchTaskService).toSelf();
 
