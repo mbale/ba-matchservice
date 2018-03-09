@@ -5,7 +5,7 @@ import { Container } from 'inversify';
 import { ConnectionManager } from 'typeorm';
 
 export function initRabbitMQ(container: Container) {
-  rabbot.handle('get-by-ids', async ({ body, reply }) => {
+  rabbot.handle('get-matches-by-ids', async ({ body, reply }) => {
     const matchIds = body.map(id => new ObjectId(id));
 
     const repository = container

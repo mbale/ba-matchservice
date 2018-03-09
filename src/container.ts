@@ -149,7 +149,7 @@ async function main() {
 
   const bindings = [
     {
-      exchange: 'match-service', target: 'match-service', keys: ['get-by-ids'],
+      exchange: 'match-service', target: 'match-service', keys: ['get-matches-by-ids'],
     },
   ];
 
