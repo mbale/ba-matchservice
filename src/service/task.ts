@@ -15,6 +15,7 @@ import {
   MatchOddsType, MatchSourceType,
   TaskService, MatchMapType, MatchStatusType,
 } from 'ba-common';
+import { MatchOddsSource } from 'ba-common/types/base/match-http-service';
 
 export interface IdentifierHandler {
   identifier: MatchSourceType;
@@ -139,6 +140,7 @@ export default class MatchTaskService extends TaskService {
               home: oddsForMatch.odds.moneyline.home,
               away: oddsForMatch.odds.moneyline.away,
               type: MatchOddsType.MoneyLine,
+              source: MatchOddsSource.PINNACLE,
             });
           }
         }
