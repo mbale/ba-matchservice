@@ -14,8 +14,8 @@ import { sha1 } from 'object-hash';
 import {
   MatchOddsType, MatchSourceType,
   TaskService, MatchMapType, MatchStatusType,
+  MatchOddsSource,
 } from 'ba-common';
-import { MatchOddsSource } from 'ba-common/types/base/match-http-service';
 
 export interface IdentifierHandler {
   identifier: MatchSourceType;
