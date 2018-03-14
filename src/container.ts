@@ -20,7 +20,7 @@ import { Container } from 'inversify';
 import { Job, JobOptions, Queue as IQueue } from 'bull';
 import { List, Map } from 'immutable';
 import { MatchEntity } from './entity/match';
-import { MatchSourceType, TeamHTTPService, LoggingMiddleware, rabbitMQConfig } from 'ba-common';
+import { MatchSourceType, TeamHTTPService, LoggingMiddleware, rabbitMQConfig, Match } from 'ba-common';
 import { useContainer, useExpressServer } from 'routing-controllers';
 import * as rabbot from 'rabbot';
 import MatchTaskService, {
@@ -29,6 +29,7 @@ import MatchTaskService, {
 import 'winston-mongodb';
 import { ObjectId } from 'mongodb';
 import { initRabbitMQ } from './gateway/rabbitmq';
+import * as nanoid from 'nanoid';
 // inject
 
 dotenv.config();
@@ -153,6 +154,7 @@ async function main() {
       keys: [
         'get-matches-by-ids',
         'get-leagues-by-ids',
+        'get-match-by-url-id',
       ],
     },
   ];
@@ -244,6 +246,19 @@ async function main() {
 
   container.get(MatchTaskService);
   logger.info(`MatchTaskService's OK`);
+
+  // migration
+  // const repo = connectionManager.get().getMongoRepository(MatchEntity);
+  // const cursor = repo.createEntityCursor();
+
+  // const buffer = []
+  // while (await cursor.hasNext()) {
+  //   const match: Match = await cursor.next();
+
+  //   match.urlId = nanoid(7);
+  //   buffer.push(match);
+  // }
+  // await repo.save(buffer);
 
   /*
     REST API

@@ -32,4 +32,18 @@ export function initRabbitMQ(container: Container) {
     });
   });
 
+  rabbot.handle('get-match-by-url-id', async ({ body, reply }) => {
+    const urlId = body;
+
+    const repository = container
+      .get<ConnectionManager>('connectionmanager').get().getMongoRepository(MatchEntity);
+
+    const match = await repository.find({
+      urlId,
+    });
+
+    return reply({
+      match,
+    });
+  });
 }
