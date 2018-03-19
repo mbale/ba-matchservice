@@ -248,17 +248,21 @@ async function main() {
   logger.info(`MatchTaskService's OK`);
 
   // migration
-  const repo = connectionManager.get().getMongoRepository(MatchEntity);
-  const cursor = repo.createEntityCursor();
+  // DO NOT DELETE
+  // occasionally we may need external package dependant
+  // migration which cannot be resolved through mongo shell
+  // and needs to run in live
+  // const repo = connectionManager.get().getMongoRepository(MatchEntity);
+  // const cursor = repo.createEntityCursor();
 
-  const buffer = []
-  while (await cursor.hasNext()) {
-    const match: Match = await cursor.next();
+  // const buffer = []
+  // while (await cursor.hasNext()) {
+  //   const match: Match = await cursor.next();
 
-    match.urlId = nanoid(7);
-    buffer.push(match);
-  }
-  await repo.save(buffer);
+  //   match.urlId = nanoid(7);
+  //   buffer.push(match);
+  // }
+  // await repo.save(buffer);
 
   /*
     REST API
