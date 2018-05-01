@@ -13,6 +13,7 @@ RUN chmod 0600 /root/.ssh/ba_common_git
 WORKDIR /app
 COPY package.json /app
 COPY . /app
+
 # Due to (security) limitations of ssh agent,
 # we need to maintain ssh agent until yarn is done with installing
 RUN eval "$(ssh-agent)" ssh-add /root/.ssh/ba_common_git \
