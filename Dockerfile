@@ -1,9 +1,9 @@
 FROM node:latest
 
+ARG GIT_COMMON_SSH_KEY
+
 # add the authorized host key for github (avoids "Host key verification failed")
 RUN mkdir ~/.ssh && ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
-
-ARG GIT_COMMON_SSH_KEY
 
 # Getting ssh key
 RUN echo $GIT_COMMON_SSH_KEY | base64 --decode > /root/.ssh/ba_common_git
