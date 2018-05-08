@@ -2,6 +2,23 @@ pipeline:
   gcr:
     image: plugins/gcr
     repo: betacle-202016/master/match-service
-    tags: latest
+    tags:
+      - ${DRONE_COMMIT}
+      - latest
     secrets: [gcr_json_key, git_common_ssh_key]
     build_args_from_env: [git_common_ssh_key]
+    when:
+      branch: [master]
+  deploy:
+    image: quay.io/honestbee/drone-kubernetes
+    kubernetes_server: ${KUBERNETES_SERVER}
+    kubernetes_token: ${KUBERNETES_TOKEN}
+    kubernetes_cert: ${KUBERNETES_CERT}
+    deployment: match-service-deployment
+    repo: gcr.io/betacle-202016/master/match-service
+    container: match-service-container
+    namespace: default
+    tag: ${DRONE_COMMIT}
+    secrets: [kubernetes_server, kubernetes_token, kubernetes_cert]
+    when:
+      branch: [master]
