@@ -1,45 +1,84 @@
-import { MatchOdds, MatchUpdate, Match, MatchSource } from 'ba-common';
 import {
   Entity,
-  ObjectIdColumn,
+  PrimaryGeneratedColumn,
   Column,
-  ObjectID,
-  BeforeUpdate,
-  BeforeInsert,
 } from 'typeorm';
-import * as nanoid from 'nanoid';
+import {
+  IsNotEmpty, IsEnum, IsNumber, IsOptional, IsDateString, ValidateIf,
+} from 'class-validator';
+import { compareAsc } from 'date-fns';
 
-@Entity('matches')
-export class MatchEntity implements Match {
-  @ObjectIdColumn()
-  _id : ObjectID;
-
-  @Column()
-  urlId: string = nanoid(7);
-
-  @Column()
-  gameId: ObjectID;
-
-  @Column()
-  leagueId: ObjectID;
-
-  @Column()
-  homeTeamId: ObjectID;
-
-  @Column()
-  awayTeamId: ObjectID;
-
-  @Column()
-  date: Date;
-
-  @Column()
-  odds: MatchOdds[] = []; // it gets later
-
-  @Column()
-  updates: MatchUpdate[] = []; // it gets later
-
-  @Column()
-  _source: MatchSource; // doesn't need initializer - during the parsing it gets
+export enum MatchSource {
+  Abios = 'abios', Pinnacle = 'pinnacle', OneHash = 'onehash',
 }
 
-export default MatchEntity​​;
+@Entity('matches')
+export default class Match {
+  @PrimaryGeneratedColumn('increment')
+  id: number;
+
+  @Column('varchar', { unique: true })
+  urlId: string;
+
+  @Column('int')
+  gameId: number;
+
+  @Column('int')
+  leagueId: number;
+
+  @Column('int')
+  homeTeamId: number;
+
+  @Column('int')
+  awayTeamId: number;
+
+  @Column('timestamp', { nullable: true })
+  startDate: Date;
+
+  @Column('timestamp', { nullable: true })
+  endDate: Date;
+
+  @Column('int', { array: true })
+  oddsIds: number[];
+
+  @Column('int', { array: true })
+  scoreIds: number[];
+
+  @Column('enum', { enum: MatchSource })
+  source: MatchSource;
+}
+
+export class MatchFragment {
+  // if match is long gone
+  @ValidateIf(o => compareAsc(o.date, new Date()) === -1)
+  @IsNotEmpty()
+  homeTeam: string;
+
+  @ValidateIf(o => compareAsc(o.date, new Date()) === -1)
+  @IsNotEmpty()
+  awayTeam: string;
+
+  @ValidateIf(o => compareAsc(o.date, new Date()) === -1)
+  @IsNotEmpty()
+  league: string;
+
+  @IsDateString()
+  @IsNotEmpty()
+  date: Date;
+
+  @IsDateString()
+  @IsNotEmpty()
+  addedDate: Date;
+
+  @IsNumber()
+  @IsOptional()
+  homeTeamScore: number;
+
+  @IsNumber()
+  @IsOptional()
+  awayTeamScore: number;
+
+  @IsEnum(MatchSource)
+  @IsNotEmpty()
+  source: MatchSource;
+}

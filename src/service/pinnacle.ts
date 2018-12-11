@@ -1,435 +1,435 @@
-import { RawMatch } from '../service/parser';
-import { MatchSourceType, MatchSource, HTTPService } from 'ba-common';
-import { List, Map } from 'immutable';
-import { injectable, inject } from 'inversify';
+// import { RawMatch } from '../service/parser';
+// import { MatchSourceType, MatchSource, HTTPService } from 'ba-common';
+// import { List, Map } from 'immutable';
+// import { injectable, inject } from 'inversify';
 
-export interface PinnacleHTTPServiceOpts {
-  getLeaguesUrl : string;
-  getMatchesUrl : string;
-  getOddsUrl: string;
-  getUpdatesUrl: string;
-  sportId : number;
-  apiKey : string;
-}
+// export interface PinnacleHTTPServiceOpts {
+//   getLeaguesUrl : string;
+//   getMatchesUrl : string;
+//   getOddsUrl: string;
+//   getUpdatesUrl: string;
+//   sportId : number;
+//   apiKey : string;
+// }
 
-export interface MatchFetchResult {
-  source : MatchSourceType;
-  matches : RawMatch[];
-  lastFetchTime : string;
-}
+// export interface MatchFetchResult {
+//   source : MatchSourceType;
+//   matches : RawMatch[];
+//   lastFetchTime : string;
+// }
 
-/**
- * Contains communication logics to pinnacle
- *
- * @class PinnacleService
- */
-@injectable()
-class PinnacleHTTPService extends HTTPService {
-  @inject('pinnaclehttpservice.options')
-  private opts: PinnacleHTTPServiceOpts;
-  private last: string;
+// /**
+//  * Contains communication logics to pinnacle
+//  *
+//  * @class PinnacleService
+//  */
+// @injectable()
+// class PinnacleHTTPService extends HTTPService {
+//   @inject('pinnaclehttpservice.options')
+//   private opts: PinnacleHTTPServiceOpts;
+//   private last: string;
 
-  /**
-   * Map and check data in format
-   *
-   * @param {any} args
-   * @returns {RawMatch}
-   */
-  private serializeMatchData(...args): RawMatch {
-    // homeTeam: string, awayTeam: string,
-    // league: string, game: string, date: Date, _source: MatchSource
-    // find for empty strings
-    const empty = args.every(arg => arg !== '');
-    // find for undefined
-    const undefined = args.every(arg => arg !== 'undefined');
+//   /**
+//    * Map and check data in format
+//    *
+//    * @param {any} args
+//    * @returns {RawMatch}
+//    */
+//   private serializeMatchData(...args): RawMatch {
+//     // homeTeam: string, awayTeam: string,
+//     // league: string, game: string, date: Date, _source: MatchSource
+//     // find for empty strings
+//     const empty = args.every(arg => arg !== '');
+//     // find for undefined
+//     const undefined = args.every(arg => arg !== 'undefined');
 
-    if (empty && undefined) {
-      return {
-        homeTeam: args[0],
-        awayTeam: args[1],
-        league: args[2],
-        game: args[3],
-        date: args[4],
-        _source: args[5],
-      };
-    }
+//     if (empty && undefined) {
+//       return {
+//         homeTeam: args[0],
+//         awayTeam: args[1],
+//         league: args[2],
+//         game: args[3],
+//         date: args[4],
+//         _source: args[5],
+//       };
+//     }
 
-    throw Error('Missing data');
-  }
+//     throw Error('Missing data');
+//   }
 
-  /**
-   * Pinnacle has differentations sometimes in entity names
-   * we remove that
-   *
-   * @static
-   * @param {string} entityToCheck
-   * @returns
-   * @memberof PinnacleService
-   */
-  private findAndRemoveKeywords(entityToCheck: string) {
-    // pinnacle related keywords
-    // only pass here lowercase keywords
-    const keywords = ['live', 'esports'];
-    let entity = entityToCheck.trim();
-    // we convert to find keywords
-    const entityLowerCase = entity.toLowerCase();
+//   /**
+//    * Pinnacle has differentations sometimes in entity names
+//    * we remove that
+//    *
+//    * @static
+//    * @param {string} entityToCheck
+//    * @returns
+//    * @memberof PinnacleService
+//    */
+//   private findAndRemoveKeywords(entityToCheck: string) {
+//     // pinnacle related keywords
+//     // only pass here lowercase keywords
+//     const keywords = ['live', 'esports'];
+//     let entity = entityToCheck.trim();
+//     // we convert to find keywords
+//     const entityLowerCase = entity.toLowerCase();
 
-    keywords.forEach((keyword) => {
-      // we check if keyword is in string
-      if (entityLowerCase.includes(keyword)) {
-        // get first index of the keywords
-        const keywordStartIndex = entityLowerCase.indexOf(keyword, 0);
-        // check where it ends
-        const keywordEndIndex = keywordStartIndex + keyword.length;
-        // cut out rest
-        entity = entity.substring(keywordEndIndex, entityLowerCase.length).trim();
-      }
-    });
+//     keywords.forEach((keyword) => {
+//       // we check if keyword is in string
+//       if (entityLowerCase.includes(keyword)) {
+//         // get first index of the keywords
+//         const keywordStartIndex = entityLowerCase.indexOf(keyword, 0);
+//         // check where it ends
+//         const keywordEndIndex = keywordStartIndex + keyword.length;
+//         // cut out rest
+//         entity = entity.substring(keywordEndIndex, entityLowerCase.length).trim();
+//       }
+//     });
 
-    return entity;
-  }
+//     return entity;
+//   }
 
-  /**
-   * Pinnacle occasionally has wrong data in their db
-   *
-   * @param {string} value
-   * @returns {boolean}
-   * @memberof PinnacleService
-   */
-  private identifyFakeData(value: string): boolean {
-    if (value.toLowerCase().includes('please')
-    || value.toLowerCase().includes('select') || value.toLowerCase().includes('map')) {
-      return true;
-    }
-    return false;
-  }
+//   /**
+//    * Pinnacle occasionally has wrong data in their db
+//    *
+//    * @param {string} value
+//    * @returns {boolean}
+//    * @memberof PinnacleService
+//    */
+//   private identifyFakeData(value: string): boolean {
+//     if (value.toLowerCase().includes('please')
+//     || value.toLowerCase().includes('select') || value.toLowerCase().includes('map')) {
+//       return true;
+//     }
+//     return false;
+//   }
 
-  /**
-   * Split leaguename into game and league name
-   *
-   * @param {string} leaguename
-   * @returns
-   * @memberof PinnacleService
-   */
-  private splitLeagueIntoLeagueAndGame(leaguename: string) {
-    let league = leaguename;
-    let game = null;
-    // include here pinnacle related separators
-    // order is important e.g cs:go - all stars
-    const separators = ['-', ':'];
-    // we only split once
-    let alreadySplitted : boolean = null;
+//   /**
+//    * Split leaguename into game and league name
+//    *
+//    * @param {string} leaguename
+//    * @returns
+//    * @memberof PinnacleService
+//    */
+//   private splitLeagueIntoLeagueAndGame(leaguename: string) {
+//     let league = leaguename;
+//     let game = null;
+//     // include here pinnacle related separators
+//     // order is important e.g cs:go - all stars
+//     const separators = ['-', ':'];
+//     // we only split once
+//     let alreadySplitted : boolean = null;
 
-    // find for separators
-    for (const separator of separators) {
-      if (league.indexOf(separator) !== -1 && !alreadySplitted) {
-        const namesInArray = league.split(separator, 2);
-        // trim whitespace and set both fields
-        league = namesInArray[1].trim();
-        game = namesInArray[0].trim();
-        alreadySplitted = true;
-      }
-    }
+//     // find for separators
+//     for (const separator of separators) {
+//       if (league.indexOf(separator) !== -1 && !alreadySplitted) {
+//         const namesInArray = league.split(separator, 2);
+//         // trim whitespace and set both fields
+//         league = namesInArray[1].trim();
+//         game = namesInArray[0].trim();
+//         alreadySplitted = true;
+//       }
+//     }
 
-    return {
-      league,
-      game,
-    };
-  }
+//     return {
+//       league,
+//       game,
+//     };
+//   }
 
-  /**
-   * Often pinnacle stores in teamname the objective type of match (1st kills) etc
-   *
-   * @param {string} teamname
-   * @param {string} segment
-   * @returns
-   * @memberof PinnacleService
-   */
-  private removeMapSegmentFromTeam(teamname: string, segment: string) {
-    let team = teamname;
+//   /**
+//    * Often pinnacle stores in teamname the objective type of match (1st kills) etc
+//    *
+//    * @param {string} teamname
+//    * @param {string} segment
+//    * @returns
+//    * @memberof PinnacleService
+//    */
+//   private removeMapSegmentFromTeam(teamname: string, segment: string) {
+//     let team = teamname;
 
-    // we find first occurance of segment
-    const startOfSegment = team.indexOf(segment);
+//     // we find first occurance of segment
+//     const startOfSegment = team.indexOf(segment);
 
-    // we found segment
-    if (startOfSegment !== -1) {
-      // cut out the original team name name
-      team = team.substring(0, startOfSegment).trim();
-    }
+//     // we found segment
+//     if (startOfSegment !== -1) {
+//       // cut out the original team name name
+//       team = team.substring(0, startOfSegment).trim();
+//     }
 
-    return team;
-  }
+//     return team;
+//   }
 
-  /**
-   * Fetch matches from pinnacle
-   *
-   * @returns {Promise<MatchFetchResult>}
-   * @memberof PinnacleService
-   */
-  public async fetchMatches(last?: string) : Promise<MatchFetchResult> {
-    try {
-      this.logger.info('Fetching matches from pinnacle API');
-      this.logger.info(`using last as ${last}`);
+//   /**
+//    * Fetch matches from pinnacle
+//    *
+//    * @returns {Promise<MatchFetchResult>}
+//    * @memberof PinnacleService
+//    */
+//   public async fetchMatches(last?: string) : Promise<MatchFetchResult> {
+//     try {
+//       this.logger.info('Fetching matches from pinnacle API');
+//       this.logger.info(`using last as ${last}`);
 
-      const params : any = {
-        sportId: this.opts.sportId,
-        oddsFormat: 'decimal',
-      };
+//       const params : any = {
+//         sportId: this.opts.sportId,
+//         oddsFormat: 'decimal',
+//       };
 
-      if (last) {
-        params.since = last;
-      }
+//       if (last) {
+//         params.since = last;
+//       }
 
-      let {
-        data: {
-          leagues,
-        },
-      } = await this.axiosInstance.get(this.opts.getLeaguesUrl, {
-        params,
-        headers: {
-          Authorization: `Basic ${this.opts.apiKey}`,
-        },
-      });
+//       let {
+//         data: {
+//           leagues,
+//         },
+//       } = await this.axiosInstance.get(this.opts.getLeaguesUrl, {
+//         params,
+//         headers: {
+//           Authorization: `Basic ${this.opts.apiKey}`,
+//         },
+//       });
 
-      const source = MatchSourceType.Pinnacle;
-      const matches : RawMatch[] = [];
+//       const source = MatchSourceType.Pinnacle;
+//       const matches : RawMatch[] = [];
 
-      // filter them by matches
-      leagues = leagues.filter(league => league.eventCount > 0);
+//       // filter them by matches
+//       leagues = leagues.filter(league => league.eventCount > 0);
 
-      const {
-        data,
-      } = await this.axiosInstance.get(this.opts.getMatchesUrl, {
-        params: {
-          sportId : this.opts.sportId,
-          leagueIds : leagues.map(l => l.id),
-        },
-        headers: {
-          Authorization: `Basic ${this.opts.apiKey}`,
-        },
-      });
+//       const {
+//         data,
+//       } = await this.axiosInstance.get(this.opts.getMatchesUrl, {
+//         params: {
+//           sportId : this.opts.sportId,
+//           leagueIds : leagues.map(l => l.id),
+//         },
+//         headers: {
+//           Authorization: `Basic ${this.opts.apiKey}`,
+//         },
+//       });
 
-      // can be empty string even if request was made with json header
-      if (data !== '') {
-        const {
-          last,
-          league: leaguesWithMatches,
-        } = data;
+//       // can be empty string even if request was made with json header
+//       if (data !== '') {
+//         const {
+//           last,
+//           league: leaguesWithMatches,
+//         } = data;
 
-        this.last = last;
+//         this.last = last;
 
-        for (const leagueWithMatch of leaguesWithMatches) {
-          let {
-            name: leaguename,
-          } = leagueWithMatch;
+//         for (const leagueWithMatch of leaguesWithMatches) {
+//           let {
+//             name: leaguename,
+//           } = leagueWithMatch;
 
-          const {
-            id: leagueId,
-          } = leagueWithMatch;
+//           const {
+//             id: leagueId,
+//           } = leagueWithMatch;
 
-          let gamename = null;
+//           let gamename = null;
 
-          // split into game and league
-          const {
-            league,
-            game,
-          } = this.splitLeagueIntoLeagueAndGame(leaguename);
-          // get data
-          leaguename = league;
-          gamename = game;
+//           // split into game and league
+//           const {
+//             league,
+//             game,
+//           } = this.splitLeagueIntoLeagueAndGame(leaguename);
+//           // get data
+//           leaguename = league;
+//           gamename = game;
 
-          if (!leaguename || !gamename) {
-            break;
-          }
+//           if (!leaguename || !gamename) {
+//             break;
+//           }
 
-          // strip out irrelevant keywords
-          gamename = this.findAndRemoveKeywords(gamename);
+//           // strip out irrelevant keywords
+//           gamename = this.findAndRemoveKeywords(gamename);
 
-          for (const match of leagueWithMatch.events) {
-            const {
-              starts: date,
-              id: matchId,
-            } = match;
+//           for (const match of leagueWithMatch.events) {
+//             const {
+//               starts: date,
+//               id: matchId,
+//             } = match;
 
-            let {
-              home: homeTeam,
-              away: awayTeam,
-            } = match;
+//             let {
+//               home: homeTeam,
+//               away: awayTeam,
+//             } = match;
 
-            const isItFake = this.identifyFakeData(homeTeam) || this.identifyFakeData(awayTeam);
+//             const isItFake = this.identifyFakeData(homeTeam) || this.identifyFakeData(awayTeam);
 
-            // check if data includes wrong data and drop it
-            if (isItFake) {
-              break;
-            }
+//             // check if data includes wrong data and drop it
+//             if (isItFake) {
+//               break;
+//             }
 
-            // we find (map) segment
-            homeTeam = this.removeMapSegmentFromTeam(homeTeam, '(');
-            awayTeam = this.removeMapSegmentFromTeam(awayTeam, '(');
+//             // we find (map) segment
+//             homeTeam = this.removeMapSegmentFromTeam(homeTeam, '(');
+//             awayTeam = this.removeMapSegmentFromTeam(awayTeam, '(');
 
-            try {
-              const serialized =
-              this.serializeMatchData(homeTeam, awayTeam, leaguename, gamename, date, {
-                leagueId,
-                matchId,
-                type: source,
-                fetchedAt: new Date(),
-              });
+//             try {
+//               const serialized =
+//               this.serializeMatchData(homeTeam, awayTeam, leaguename, gamename, date, {
+//                 leagueId,
+//                 matchId,
+//                 type: source,
+//                 fetchedAt: new Date(),
+//               });
 
-              matches.push(serialized);
-            } catch (error) {
-              this.logger.error(error);
-            }
-          }
-        }
-      }
+//               matches.push(serialized);
+//             } catch (error) {
+//               this.logger.error(error);
+//             }
+//           }
+//         }
+//       }
 
-      this.logger.info(`We got ${matches.length} matches`);
+//       this.logger.info(`We got ${matches.length} matches`);
 
-      return {
-        source,
-        matches,
-        lastFetchTime: this.last,
-      };
-    } catch (error) {
-      this.logger.error(error);
-      throw error;
-    }
-  }
+//       return {
+//         source,
+//         matches,
+//         lastFetchTime: this.last,
+//       };
+//     } catch (error) {
+//       this.logger.error(error);
+//       throw error;
+//     }
+//   }
 
-  public async fetchOdds(last?: string) {
-    try {
-      this.logger.info('Fetching odds from pinnacle API');
-      this.logger.info(`using last as ${last}`);
+//   public async fetchOdds(last?: string) {
+//     try {
+//       this.logger.info('Fetching odds from pinnacle API');
+//       this.logger.info(`using last as ${last}`);
 
-      const params : any = {
-        sportId: this.opts.sportId,
-        oddsFormat: 'decimal',
-      };
+//       const params : any = {
+//         sportId: this.opts.sportId,
+//         oddsFormat: 'decimal',
+//       };
 
-      if (last) {
-        params.since = last;
-      }
+//       if (last) {
+//         params.since = last;
+//       }
 
-      const {
-        data: {
-          last: lastFetchTime,
-          leagues,
-        },
-      } = await this.axiosInstance.get(this.opts.getOddsUrl, {
-        params,
-        headers: {
-          Authorization: `Basic ${this.opts.apiKey}`,
-        },
-      });
+//       const {
+//         data: {
+//           last: lastFetchTime,
+//           leagues,
+//         },
+//       } = await this.axiosInstance.get(this.opts.getOddsUrl, {
+//         params,
+//         headers: {
+//           Authorization: `Basic ${this.opts.apiKey}`,
+//         },
+//       });
 
-      const odds = [];
+//       const odds = [];
 
-      for (const league of leagues) {
-        league.events.forEach((event) => {
-          const matchWithMoneyline = event.periods.find(period => period.moneyline);
-          const matchWithSpreadOdds = event.periods.find(period => period.spreads);
-          const matchWithTotalOdds = event.periods.find(period => period.totals);
+//       for (const league of leagues) {
+//         league.events.forEach((event) => {
+//           const matchWithMoneyline = event.periods.find(period => period.moneyline);
+//           const matchWithSpreadOdds = event.periods.find(period => period.spreads);
+//           const matchWithTotalOdds = event.periods.find(period => period.totals);
 
-          const matchId = event.id;
-          const leagueId = league.id;
+//           const matchId = event.id;
+//           const leagueId = league.id;
 
-          let eligibleToSend = null;
+//           let eligibleToSend = null;
 
-          const match : {
-            id: string;
-            leagueId: string;
-            odds: {
-              moneyline?: {};
-              spread?: {};
-              total?: {};
-            }
-          } = {
-            leagueId,
-            id: matchId,
-            odds: {},
-          };
+//           const match : {
+//             id: string;
+//             leagueId: string;
+//             odds: {
+//               moneyline?: {};
+//               spread?: {};
+//               total?: {};
+//             }
+//           } = {
+//             leagueId,
+//             id: matchId,
+//             odds: {},
+//           };
 
-          // gather all odds data
-          if (matchWithMoneyline) {
-            match.odds.moneyline = matchWithMoneyline.moneyline;
-            eligibleToSend = true;
-          }
+//           // gather all odds data
+//           if (matchWithMoneyline) {
+//             match.odds.moneyline = matchWithMoneyline.moneyline;
+//             eligibleToSend = true;
+//           }
 
-          if (matchWithSpreadOdds) {
-            match.odds.spread = matchWithSpreadOdds.spreads;
-            eligibleToSend = true;
-          }
+//           if (matchWithSpreadOdds) {
+//             match.odds.spread = matchWithSpreadOdds.spreads;
+//             eligibleToSend = true;
+//           }
 
-          if (matchWithTotalOdds) {
-            match.odds.total = matchWithTotalOdds.totals[0];
-            eligibleToSend = true;
-          }
+//           if (matchWithTotalOdds) {
+//             match.odds.total = matchWithTotalOdds.totals[0];
+//             eligibleToSend = true;
+//           }
 
-          if (eligibleToSend) {
-            odds.push(match);
-          }
-        });
-      }
+//           if (eligibleToSend) {
+//             odds.push(match);
+//           }
+//         });
+//       }
 
-      return {
-        odds,
-        lastFetchTime,
-      };
-    } catch (error) {
-      this.logger.error(error);
-      throw error;
-    }
-  }
+//       return {
+//         odds,
+//         lastFetchTime,
+//       };
+//     } catch (error) {
+//       this.logger.error(error);
+//       throw error;
+//     }
+//   }
 
-  async fetchUpdates(last?: string) {
-    try {
-      this.logger.info('Fetching updates from pinnacle API');
-      this.logger.info(`using last as ${last}`);
+//   async fetchUpdates(last?: string) {
+//     try {
+//       this.logger.info('Fetching updates from pinnacle API');
+//       this.logger.info(`using last as ${last}`);
 
-      const params : any = {
-        sportId: this.opts.sportId,
-        oddsFormat: 'decimal',
-      };
+//       const params : any = {
+//         sportId: this.opts.sportId,
+//         oddsFormat: 'decimal',
+//       };
 
-      if (last) {
-        params.since = last;
-      }
+//       if (last) {
+//         params.since = last;
+//       }
 
-      const updates = [];
+//       const updates = [];
 
-      const {
-        data: {
-          last: lastFetchTime,
-          leagues = [],
-        },
-      } = await this.axiosInstance.get(this.opts.getUpdatesUrl, {
-        params,
-        headers: {
-          Authorization: `Basic ${this.opts.apiKey}`,
-        },
-      });
+//       const {
+//         data: {
+//           last: lastFetchTime,
+//           leagues = [],
+//         },
+//       } = await this.axiosInstance.get(this.opts.getUpdatesUrl, {
+//         params,
+//         headers: {
+//           Authorization: `Basic ${this.opts.apiKey}`,
+//         },
+//       });
 
-      for (const { events, id: leagueId } of leagues) {
-        for (const { id: matchId, periods } of events) {
-          const update = {
-            matchId,
-            leagueId,
-            periods,
-          };
-          updates.push(update);
-        }
-      }
+//       for (const { events, id: leagueId } of leagues) {
+//         for (const { id: matchId, periods } of events) {
+//           const update = {
+//             matchId,
+//             leagueId,
+//             periods,
+//           };
+//           updates.push(update);
+//         }
+//       }
 
-      return {
-        updates,
-        lastFetchTime,
-      };
-    } catch (error) {
-      this.logger.error(error);
-      throw error;
-    }
-  }
-}
+//       return {
+//         updates,
+//         lastFetchTime,
+//       };
+//     } catch (error) {
+//       this.logger.error(error);
+//       throw error;
+//     }
+//   }
+// }
 
-export default PinnacleHTTPService;
+// export default PinnacleHTTPService;

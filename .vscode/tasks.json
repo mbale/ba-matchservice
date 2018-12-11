@@ -6,12 +6,18 @@
 	"tasks": [
 		{
 			"suppressTaskName": true,
-			"taskName": "backpack dev",
+			"taskName": "dev",
+			"args": [
+				""
+			],
 			"isBuildCommand": false
 		},
 		{
 			"suppressTaskName": true,
-			"taskName": "backpack build",
+			"taskName": "build",
+			"args": [
+				"build"
+			],
 			"isBuildCommand": true
 		}
 	]
